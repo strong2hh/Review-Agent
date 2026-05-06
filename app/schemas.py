@@ -56,6 +56,8 @@ class SubmitAnswerResponse(BaseModel):
     star_0_5: int
     correction: str
     key_points: str
+    missing_parts: list[str]
+    correct_answer: str
     mastery_before: float
     mastery_after: float
     next_review_at: datetime

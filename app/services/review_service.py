@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Optional, Tuple
 
@@ -10,6 +11,45 @@ from app.models import KnowledgePoint, ReviewAttempt, ReviewSession, ReviewSessi
 from app.services.model_service import run_grading, run_question_generation
 from app.services.mastery import update_mastery_and_schedule
 from app.services.settings_service import get_or_create_settings
+
+
+def _tokenize(text: str) -> set[str]:
+    return set(re.findall(r"[A-Za-z0-9_\u4e00-\u9fff]{2,}", text.lower()))
+
+
+def _split_reference_points(reference: str) -> list[str]:
+    if not reference.strip():
+        return []
+
+    chunks: list[str] = []
+    for line in reference.replace("\r\n", "\n").split("\n"):
+        for part in re.split(r"[。；;！？!?]", line):
+            for sub in re.split(r"[，,、]", part):
+                clean = re.sub(r"^\s*[-*•\d\.\)]\s*", "", sub).strip()
+                if clean:
+                    chunks.append(clean)
+
+    dedup: list[str] = []
+    for c in chunks:
+        if c not in dedup:
+            dedup.append(c)
+    return dedup
+
+
+def _extract_missing_parts(reference: str, user_answer: str) -> list[str]:
+    points = _split_reference_points(reference)
+    if not points:
+        return []
+
+    answer_tokens = _tokenize(user_answer)
+    missing: list[str] = []
+    for p in points:
+        point_tokens = _tokenize(p)
+        # If no token can be matched, fall back to substring matching.
+        covered = bool(point_tokens & answer_tokens) if point_tokens else p in user_answer
+        if not covered:
+            missing.append(p)
+    return missing[:12]
 
 
 def get_due_knowledge_points(db: Session, now: datetime) -> list[KnowledgePoint]:
@@ -121,6 +161,8 @@ def submit_answer(db: Session, session_id: int, answer: str, now: datetime) -> d
 
     db.commit()
 
+    missing_parts = _extract_missing_parts(kp.content, answer)
+
     return {
         "session_id": session.id,
         "question_id": item.id,
@@ -128,6 +170,8 @@ def submit_answer(db: Session, session_id: int, answer: str, now: datetime) -> d
         "star_0_5": star,
         "correction": grade.correction,
         "key_points": grade.key_points,
+        "missing_parts": missing_parts,
+        "correct_answer": kp.content,
         "mastery_before": old_mastery,
         "mastery_after": new_mastery,
         "next_review_at": next_review_at,

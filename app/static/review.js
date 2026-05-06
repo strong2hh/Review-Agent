@@ -26,6 +26,22 @@ async function parseJsonOrThrow(resp) {
   return data;
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderMissingParts(parts) {
+  if (!Array.isArray(parts) || parts.length === 0) {
+    return "<p class=\"result-empty\">未发现明显遗漏要点。</p>";
+  }
+  return `<ul class="missing-list">${parts.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+}
+
 function updateProgress() {
   if (!totalQuestions) {
     progressEl.textContent = "当前没有待复习知识点，稍后再来。";
@@ -92,9 +108,15 @@ async function submitAnswer() {
 
   resultEl.style.display = "block";
   resultEl.innerHTML = `
-    <strong>得分：</strong>${data.score_0_100} / 100（${data.star_0_5} 星）<br/>
-    <strong>纠错建议：</strong>${data.correction}<br/>
-    <strong>关键要点：</strong>${data.key_points || "-"}
+    <div><strong>得分：</strong>${data.score_0_100} / 100（${data.star_0_5} 星）</div>
+    <div class="result-group">
+      <strong>纠错建议（未回答部分）：</strong>
+      ${renderMissingParts(data.missing_parts)}
+    </div>
+    <div class="result-group">
+      <strong>正确答案：</strong>
+      <div class="answer-scroll">${escapeHtml(data.correct_answer || "-")}</div>
+    </div>
   `;
 
   if (data.completed) {
