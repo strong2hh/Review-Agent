@@ -86,8 +86,8 @@ def on_startup() -> None:
     scheduler = BackgroundScheduler(timezone=settings.timezone)
     scheduler.add_job(
         _run_daily_job,
-        trigger=CronTrigger(hour=9, minute=30, timezone=settings.timezone),
-        id="daily_0930_digest",
+        trigger=CronTrigger(hour=settings.reminder_hour, minute=settings.reminder_minute, timezone=settings.timezone),
+        id="daily_digest",
         replace_existing=True,
     )
     scheduler.start()

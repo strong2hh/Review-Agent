@@ -9,6 +9,9 @@ const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const titleInput = document.getElementById("title");
 const contentInput = document.getElementById("content");
 const tagsInput = document.getElementById("tags");
+const importFormatEl = document.getElementById("import-format");
+const importPayloadEl = document.getElementById("import-payload");
+const importFileEl = document.getElementById("import-file");
 
 let editingKnowledgePointId = null;
 
@@ -42,6 +45,14 @@ function toErrorMessage(err) {
     return err.message;
   }
   return "请求失败，请稍后重试";
+}
+
+function detectImportFormat(filename) {
+  const lower = String(filename || "").toLowerCase();
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+    return "markdown";
+  }
+  return "csv";
 }
 
 function resetEditMode() {
@@ -198,8 +209,8 @@ importForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   importBtn.disabled = true;
 
-  const format = document.getElementById("import-format").value;
-  const payload = document.getElementById("import-payload").value;
+  const format = importFormatEl.value;
+  const payload = importPayloadEl.value;
 
   if (!payload.trim()) {
     showFeedback(importFeedbackEl, false, "导入内容不能为空");
@@ -220,6 +231,23 @@ importForm.addEventListener("submit", async (event) => {
     showFeedback(importFeedbackEl, false, `导入失败：${toErrorMessage(err)}`);
   } finally {
     importBtn.disabled = false;
+  }
+});
+
+importFileEl.addEventListener("change", async (event) => {
+  const input = event.target;
+  const file = input && input.files ? input.files[0] : null;
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    importFormatEl.value = detectImportFormat(file.name);
+    importPayloadEl.value = text;
+    showFeedback(importFeedbackEl, true, `已加载文件：${file.name}，点击“执行导入”即可写入。`);
+  } catch (_err) {
+    showFeedback(importFeedbackEl, false, "文件读取失败，请重试。");
   }
 });
 

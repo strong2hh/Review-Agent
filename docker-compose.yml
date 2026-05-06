@@ -8,6 +8,8 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-prod}
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Shanghai}
+      REMINDER_HOUR: ${REMINDER_HOUR:-8}
+      REMINDER_MINUTE: ${REMINDER_MINUTE:-0}
       REVIEW_ENTRY_URL: ${REVIEW_ENTRY_URL:-http://localhost:8000/review}
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/review_agent.db}
       RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-}

@@ -14,6 +14,8 @@ class Settings:
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./review_agent.db")
     timezone: str = os.getenv("APP_TIMEZONE", "Asia/Shanghai")
     review_entry_url: str = os.getenv("REVIEW_ENTRY_URL", "http://localhost:8000/review")
+    reminder_hour: int = int(os.getenv("REMINDER_HOUR", "8"))
+    reminder_minute: int = int(os.getenv("REMINDER_MINUTE", "0"))
     smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
     recipient_email: str = os.getenv("RECIPIENT_EMAIL", "")

@@ -7,7 +7,7 @@ FastAPI + SQLite 实现的单用户复习 Agent：
 - 评分 + 纠错 + 关键要点（严格 JSON Schema）
 - 记录掌握度（0-5 星）
 - 按 1/2/4/7/15/30 天 + 掌握度因子自适应排期
-- 每天 09:30（Asia/Shanghai）发送 1 封汇总提醒邮件
+- 每天 08:00（Asia/Shanghai）发送 1 封汇总提醒邮件
 
 ## 多模型能力
 
@@ -69,13 +69,15 @@ docker compose up -d
 说明：
 
 - SQLite 数据文件存放在 Docker Volume `review-agent-data`，容器重建后数据仍保留。
-- 当前服务包含 APScheduler 定时任务（每日 09:30 邮件提醒），请保持单实例运行，避免重复发送。
+- 当前服务包含 APScheduler 定时任务（默认每日 08:00 邮件提醒），请保持单实例运行，避免重复发送。
 
 ## 关键配置（环境变量）
 
 - `DATABASE_URL` 默认 `sqlite:///./review_agent.db`
 - `APP_ENV` 设为 `test` 可禁用调度器
 - `APP_TIMEZONE` 默认 `Asia/Shanghai`
+- `REMINDER_HOUR` 默认 `8`
+- `REMINDER_MINUTE` 默认 `0`
 - `REVIEW_ENTRY_URL` 邮件中的复习入口（默认 `http://localhost:8000/review`）
 - `OPENAI_API_KEY` / `OPENAI_BASE_URL`（可选，默认 `https://api.openai.com/v1`）
 - `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL`（可选，默认 `https://api.deepseek.com/v1`）
@@ -93,6 +95,8 @@ docker compose up -d
 APP_ENV=dev
 DATABASE_URL=sqlite:///./review_agent.db
 APP_TIMEZONE=Asia/Shanghai
+REMINDER_HOUR=8
+REMINDER_MINUTE=0
 REVIEW_ENTRY_URL=http://localhost:8000/review
 
 RECIPIENT_EMAIL=you@example.com
