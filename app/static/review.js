@@ -63,7 +63,7 @@ async function startSession() {
   }
 
   titleEl.textContent = data.title || "知识点";
-  questionEl.textContent = data.question || "";
+  questionEl.textContent = "";
   updateProgress();
 }
 
@@ -99,7 +99,7 @@ async function submitAnswer() {
 
   if (data.completed) {
     titleEl.textContent = "本次复习已完成";
-    questionEl.textContent = "辛苦了，你已经完成所有待复习知识点。";
+    questionEl.textContent = "";
     answerEl.style.display = "none";
     submitBtn.style.display = "none";
     progressEl.textContent = `已完成 ${totalQuestions} / ${totalQuestions}`;
@@ -108,7 +108,8 @@ async function submitAnswer() {
 
   currentIndex += 1;
   currentQuestionId = data.next_question_id;
-  questionEl.textContent = data.next_question || "";
+  titleEl.textContent = data.next_title || "知识点";
+  questionEl.textContent = "";
   answerEl.value = "";
   submitBtn.disabled = false;
   updateProgress();

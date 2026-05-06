@@ -132,6 +132,7 @@ def submit_answer(db: Session, session_id: int, answer: str, now: datetime) -> d
         "mastery_after": new_mastery,
         "next_review_at": next_review_at,
         "next_question_id": None if completed else next_item.id,
+        "next_title": None if completed else next_item.knowledge_point.title,
         "next_question": None if completed else next_item.question,
         "completed": completed,
     }

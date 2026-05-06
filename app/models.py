@@ -82,12 +82,12 @@ class AppSetting(Base):
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    model_provider: Mapped[str] = mapped_column(String(50), default="mock")
-    model_name: Mapped[str] = mapped_column(String(100), default="mock-v1")
-    question_provider: Mapped[str] = mapped_column(String(50), default="mock")
-    question_model: Mapped[str] = mapped_column(String(100), default="mock-q-v1")
-    grading_provider: Mapped[str] = mapped_column(String(50), default="mock")
-    grading_model: Mapped[str] = mapped_column(String(100), default="mock-g-v1")
+    model_provider: Mapped[str] = mapped_column(String(50), default="deepseek")
+    model_name: Mapped[str] = mapped_column(String(100), default="deepseek-chat")
+    question_provider: Mapped[str] = mapped_column(String(50), default="deepseek")
+    question_model: Mapped[str] = mapped_column(String(100), default="deepseek-chat")
+    grading_provider: Mapped[str] = mapped_column(String(50), default="deepseek")
+    grading_model: Mapped[str] = mapped_column(String(100), default="deepseek-chat")
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Shanghai")
     recipient_email: Mapped[str] = mapped_column(String(255), default="")
     smtp_from: Mapped[str] = mapped_column(String(255), default="")

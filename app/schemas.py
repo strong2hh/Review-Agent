@@ -60,6 +60,7 @@ class SubmitAnswerResponse(BaseModel):
     mastery_after: float
     next_review_at: datetime
     next_question_id: Optional[int]
+    next_title: Optional[str]
     next_question: Optional[str]
     completed: bool
 

@@ -91,6 +91,31 @@ def test_admin_page_and_knowledge_points_list_api():
     assert rows[0]["tags"] == ["db", "sql"]
 
 
+def test_submit_answer_returns_next_title_for_following_question():
+    client.post(
+        "/api/knowledge-points",
+        json={"title": "缓存穿透", "content": "查询不存在数据导致穿透到数据库", "tags": []},
+    )
+    client.post(
+        "/api/knowledge-points",
+        json={"title": "缓存雪崩", "content": "大量缓存同一时间失效导致数据库压力激增", "tags": []},
+    )
+
+    start_resp = client.post("/api/review/session/start", json={})
+    assert start_resp.status_code == 200
+    session_id = start_resp.json()["session_id"]
+
+    submit_resp = client.post(
+        f"/api/review/session/{session_id}/answer",
+        json={"answer": "先说定义，再说常见治理手段。"},
+    )
+    assert submit_resp.status_code == 200
+    body = submit_resp.json()
+    assert body["completed"] is False
+    assert isinstance(body["next_title"], str)
+    assert len(body["next_title"]) > 0
+
+
 def test_knowledge_point_update_and_delete():
     create_resp = client.post(
         "/api/knowledge-points",
