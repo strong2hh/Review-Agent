@@ -4,46 +4,148 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Review Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Work+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --bg-main: #f7f4ee;
+        --ink-strong: #14213d;
+        --ink-soft: #45526f;
+        --line: #d7d2c9;
+        --accent: #c54f24;
+        --accent-2: #0b6e6e;
+        --card: rgba(255, 252, 246, 0.88);
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        font-family: "Helvetica Neue", "PingFang SC", sans-serif;
         margin: 0;
         min-height: 100vh;
-        background: linear-gradient(135deg, #fff6e5 0%, #e7f5ff 100%);
-        color: #1a1a1a;
+        font-family: "Work Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--ink-strong);
+        background: radial-gradient(circle at 12% 12%, #e6d8c7, transparent 36%),
+          radial-gradient(circle at 88% 16%, #b7d8d8, transparent 32%),
+          linear-gradient(160deg, #f6f2ea, #f8f9f4 48%, #f0f5f5);
         display: grid;
         place-items: center;
+        overflow: hidden;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(20, 33, 61, 0.06) 0.6px, transparent 0.6px);
+        background-size: 4px 4px;
+        mix-blend-mode: multiply;
+        opacity: 0.35;
       }
       .card {
-        width: min(700px, 92vw);
-        background: rgba(255, 255, 255, 0.92);
-        border-radius: 20px;
-        padding: 28px;
-        box-shadow: 0 20px 60px rgba(18, 38, 63, 0.18);
+        position: relative;
+        width: min(820px, 92vw);
+        border: 1px solid var(--line);
+        background: var(--card);
+        backdrop-filter: blur(6px);
+        border-radius: 28px;
+        padding: clamp(24px, 4vw, 44px);
+        box-shadow: 0 28px 80px rgba(20, 33, 61, 0.18);
+        animation: rise 0.7s ease-out;
+      }
+      .eyebrow {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent-2);
+        font-weight: 700;
       }
       h1 {
-        margin-top: 0;
+        margin: 12px 0 8px;
+        font-family: "Noto Serif SC", "Songti SC", serif;
+        font-size: clamp(32px, 5vw, 52px);
+        line-height: 1.1;
       }
-      a.button {
-        display: inline-block;
-        background: #14532d;
-        color: white;
-        padding: 12px 18px;
+      .lead {
+        margin: 0;
+        max-width: 58ch;
+        color: var(--ink-soft);
+        font-size: clamp(15px, 2.2vw, 18px);
+        line-height: 1.75;
+      }
+      .actions {
+        margin-top: 26px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 11px 18px;
+        border-radius: 999px;
         text-decoration: none;
-        border-radius: 12px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
-      p.meta {
-        color: #555;
+      .button.primary {
+        background: var(--ink-strong);
+        color: #fff;
+        box-shadow: 0 12px 26px rgba(20, 33, 61, 0.25);
+      }
+      .button.secondary {
+        background: #ffffffcc;
+        color: var(--accent-2);
+        border: 1px solid #9cc7c7;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+      }
+      .meta {
+        margin-top: 20px;
+        color: #4c5c6c;
+        font-size: 14px;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      @media (max-width: 720px) {
+        .card {
+          border-radius: 20px;
+          padding: 22px;
+        }
+        .actions {
+          flex-direction: column;
+        }
+        .button {
+          width: 100%;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="card">
+    <main class="card">
+      <p class="eyebrow">Review System</p>
       <h1>复习 Agent</h1>
-      <p>每日 09:30（UTC+8）汇总提醒邮件，进入后逐题复习。</p>
-      <a class="button" href="/review">开始今日复习</a>
-      <a class="button" href="/admin/knowledge-points" style="margin-left: 8px; background: #0c4a6e">后台录入知识点</a>
-      <p class="meta">你也可以通过 API 创建知识点并设置邮箱。</p>
-    </div>
+      <p class="lead">每天 09:30 自动提醒，进入后按题复习并即时评分。你的知识点会根据掌握度自动安排下一次复习时间。</p>
+      <div class="actions">
+        <a class="button primary" href="/review">开始今日复习</a>
+        <a class="button secondary" href="/admin/knowledge-points">后台录入知识点</a>
+      </div>
+      <p class="meta">支持 API 批量录入、多模型出题与评分分离、失败重试与告警。</p>
+    </main>
   </body>
 </html>

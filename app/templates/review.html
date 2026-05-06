@@ -4,66 +4,204 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>逐题复习</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --bg: #f2f5f3;
+        --panel: rgba(255, 255, 255, 0.92);
+        --line: #d4ddd8;
+        --ink: #1f2b37;
+        --ink-soft: #495a68;
+        --accent: #0b5b8c;
+        --accent-warm: #c6492d;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        font-family: "Helvetica Neue", "PingFang SC", sans-serif;
         margin: 0;
         min-height: 100vh;
-        background: radial-gradient(circle at 15% 15%, #d5f5e3, transparent 35%),
-          radial-gradient(circle at 85% 20%, #ffe5d4, transparent 30%),
-          linear-gradient(180deg, #f6fff9, #f7fbff);
-        color: #0f172a;
+        font-family: "Manrope", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 10% 15%, #c9dddb, transparent 32%),
+          radial-gradient(circle at 84% 14%, #f2cfbe, transparent 28%),
+          linear-gradient(160deg, #eef5f1, #f7f8f6 52%, #eef3f6);
       }
       .wrap {
-        width: min(920px, 94vw);
-        margin: 30px auto;
+        width: min(1080px, 94vw);
+        margin: 28px auto 36px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .title-main {
+        margin: 0;
+        font-family: "Bitter", "Songti SC", serif;
+        font-size: clamp(28px, 3.6vw, 40px);
+      }
+      .back-link {
+        color: #0a4e74;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 14px;
       }
       .panel {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 18px;
-        padding: 22px;
-        box-shadow: 0 18px 48px rgba(16, 24, 40, 0.14);
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(4px);
+        box-shadow: 0 20px 56px rgba(21, 35, 49, 0.16);
+      }
+      .main {
+        padding: clamp(18px, 3vw, 28px);
+      }
+      .progress {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #aac5d8;
+        color: #0e4f75;
+        background: #eaf4fb;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        margin-bottom: 16px;
+      }
+      .kp-title {
+        margin: 0;
+        font-family: "Bitter", "Songti SC", serif;
+        font-size: clamp(20px, 2.6vw, 30px);
+      }
+      .question {
+        margin: 12px 0 18px;
+        color: var(--ink-soft);
+        line-height: 1.75;
+        font-size: 16px;
+        min-height: 54px;
       }
       textarea {
         width: 100%;
-        min-height: 150px;
-        border-radius: 10px;
-        border: 1px solid #cbd5e1;
-        padding: 12px;
-        font-size: 14px;
+        min-height: 180px;
+        border: 1px solid #cad5de;
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 15px;
+        font-family: inherit;
+        line-height: 1.65;
+        color: var(--ink);
+        background: #ffffff;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #6e9cbc;
+        box-shadow: 0 0 0 3px rgba(11, 91, 140, 0.14);
       }
       button {
-        margin-top: 12px;
+        margin-top: 14px;
         border: 0;
-        background: #0c4a6e;
-        color: white;
-        border-radius: 10px;
-        padding: 10px 16px;
+        background: linear-gradient(120deg, var(--accent), #1570a7);
+        color: #fff;
+        border-radius: 12px;
+        padding: 11px 18px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
         cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 12px 26px rgba(11, 91, 140, 0.28);
+      }
+      button:hover {
+        transform: translateY(-1px);
+      }
+      button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
       }
       .result {
         margin-top: 16px;
+        border: 1px solid #f0c8bc;
+        background: #fff4ef;
+        border-radius: 16px;
         padding: 14px;
-        border-radius: 10px;
-        background: #f8fafc;
+        color: #51352f;
+        line-height: 1.7;
       }
-      .muted {
-        color: #334155;
+      .result strong {
+        color: #7a2d1c;
+      }
+      .aside {
+        padding: 16px;
+      }
+      .aside h2 {
+        margin: 0 0 10px;
+        font-family: "Bitter", serif;
+        font-size: 20px;
+      }
+      .aside p {
+        margin: 0;
+        color: var(--ink-soft);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+      .tips {
+        margin-top: 14px;
+        padding-left: 18px;
+        color: #3e4f5c;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      @media (max-width: 920px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .aside {
+          order: -1;
+        }
       }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <div class="panel">
-        <h1>逐题复习</h1>
-        <p id="progress" class="muted">正在加载复习队列...</p>
-        <h2 id="title"></h2>
-        <p id="question"></p>
-        <textarea id="answer" placeholder="请输入你的答案"></textarea>
-        <br />
-        <button id="submit-btn">提交并进入下一题</button>
+      <header class="header">
+        <h1 class="title-main">逐题复习</h1>
+        <a class="back-link" href="/">返回首页</a>
+      </header>
 
-        <div id="result" class="result" style="display: none"></div>
+      <div class="layout">
+        <section class="panel main">
+          <p id="progress" class="progress">正在加载复习队列...</p>
+          <h2 id="title" class="kp-title"></h2>
+          <p id="question" class="question"></p>
+
+          <textarea id="answer" placeholder="请尽量用自己的语言复述，并写出关键步骤或结论"></textarea>
+          <button id="submit-btn">提交并进入下一题</button>
+
+          <div id="result" class="result" style="display: none"></div>
+        </section>
+
+        <aside class="panel aside">
+          <h2>作答建议</h2>
+          <p>简答题更看重结构与关键词。先给结论，再补关键步骤，分数通常更稳定。</p>
+          <ul class="tips">
+            <li>先写定义，再写场景。</li>
+            <li>步骤题用编号描述。</li>
+            <li>出现术语时给一句解释。</li>
+          </ul>
+        </aside>
       </div>
     </div>
     <script src="/static/review.js"></script>
