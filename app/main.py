@@ -281,6 +281,17 @@ def model_providers():
     return [ProviderSpecOut(**x) for x in list_provider_specs()]
 
 
+@app.get("/api/settings/models", response_model=ModelChannelsOut)
+def get_model_channels(db: Session = Depends(get_db)):
+    setting = get_or_create_settings(db)
+    return ModelChannelsOut(
+        question_provider=setting.question_provider,
+        question_model=setting.question_model,
+        grading_provider=setting.grading_provider,
+        grading_model=setting.grading_model,
+    )
+
+
 @app.post("/api/settings/models", response_model=ModelChannelsOut)
 def update_model_channels(payload: ModelChannelsUpdate, db: Session = Depends(get_db)):
     setting = get_or_create_settings(db)

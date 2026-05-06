@@ -147,6 +147,14 @@ def test_models_provider_list_and_channels_update():
     assert body["question_provider"] == "deepseek"
     assert body["grading_provider"] == "glm"
 
+    current_resp = client.get("/api/settings/models")
+    assert current_resp.status_code == 200
+    current = current_resp.json()
+    assert current["question_provider"] == "deepseek"
+    assert current["question_model"] == "deepseek-chat"
+    assert current["grading_provider"] == "glm"
+    assert current["grading_model"] == "glm-4.5"
+
 
 def test_markdown_import_supports_hash_headings():
     payload = """# HTTP 缓存

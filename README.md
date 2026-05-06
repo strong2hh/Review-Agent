@@ -115,6 +115,7 @@ SEND_EMPTY_DIGEST=0
 - `POST /api/review/session/{id}/answer`
 - `POST /api/reminder/run-daily`
 - `GET /api/models/providers`
+- `GET /api/settings/models`
 - `POST /api/settings/models`
 - `POST /api/settings/model`（兼容旧接口，deprecated）
 - `POST /api/settings/email`
