@@ -76,6 +76,9 @@ def test_admin_page_and_knowledge_points_list_api():
     page_resp = client.get("/admin/knowledge-points")
     assert page_resp.status_code == 200
     assert "后台录入知识点" in page_resp.text
+    model_page_resp = client.get("/admin/model-settings")
+    assert model_page_resp.status_code == 200
+    assert "模型配置" in model_page_resp.text
 
     create_resp = client.post(
         "/api/knowledge-points",

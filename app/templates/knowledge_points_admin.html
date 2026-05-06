@@ -207,21 +207,8 @@
       .action-delete {
         background: var(--danger);
       }
-      .mini-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-      .hint {
-        margin-top: 8px;
-        color: #5b6c7a;
-        font-size: 13px;
-      }
       @media (max-width: 960px) {
         .grid {
-          grid-template-columns: 1fr;
-        }
-        .mini-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -231,7 +218,10 @@
     <div class="wrap">
       <div class="header">
         <h1>后台录入知识点</h1>
-        <a class="link" href="/">返回首页</a>
+        <div>
+          <a class="link" href="/admin/model-settings" style="margin-right: 10px">模型配置</a>
+          <a class="link" href="/">返回首页</a>
+        </div>
       </div>
       <p class="lead">在这里管理题库：单条录入、批量导入、在线编辑与删除。</p>
 
@@ -279,36 +269,6 @@
           </form>
           <div id="import-feedback" class="feedback"></div>
         </div>
-      </div>
-
-      <div class="panel" style="margin-top: 16px">
-        <h2>模型配置</h2>
-        <p class="muted">分别设置出题模型和评分模型。保存后，新开启的复习会话会使用最新配置。</p>
-        <form id="model-form">
-          <div class="mini-grid">
-            <div>
-              <label for="question-provider">出题 Provider</label>
-              <select id="question-provider" required></select>
-            </div>
-            <div>
-              <label for="question-model">出题 Model</label>
-              <input id="question-model" type="text" placeholder="例如：gpt-4o-mini" required />
-            </div>
-            <div>
-              <label for="grading-provider">评分 Provider</label>
-              <select id="grading-provider" required></select>
-            </div>
-            <div>
-              <label for="grading-model">评分 Model</label>
-              <input id="grading-model" type="text" placeholder="例如：deepseek-chat" required />
-            </div>
-          </div>
-          <div class="btn-row">
-            <button id="save-model-btn" class="primary" type="submit">保存模型配置</button>
-          </div>
-        </form>
-        <p class="hint">如使用非 mock Provider，请先在环境变量中配置对应 API Key。</p>
-        <div id="model-feedback" class="feedback"></div>
       </div>
 
       <div class="panel" style="margin-top: 16px">

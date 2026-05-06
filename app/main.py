@@ -117,6 +117,11 @@ def knowledge_point_admin_page(request: Request):
     return templates.TemplateResponse("knowledge_points_admin.html", {"request": request})
 
 
+@app.get("/admin/model-settings", response_class=HTMLResponse)
+def model_settings_page(request: Request):
+    return templates.TemplateResponse("model_settings.html", {"request": request})
+
+
 @app.post("/api/knowledge-points", response_model=KnowledgePointOut)
 def create_knowledge_point(payload: KnowledgePointCreate, db: Session = Depends(get_db)):
     clean_tags = [tag.strip() for tag in payload.tags if tag.strip()]

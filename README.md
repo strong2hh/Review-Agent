@@ -29,6 +29,7 @@ uvicorn app.main:app --reload
 
 - `http://localhost:8000/review`：逐题复习页面
 - `http://localhost:8000/admin/knowledge-points`：后台知识点页面（单条/批量录入 + 编辑 + 删除）
+- `http://localhost:8000/admin/model-settings`：模型配置页面（出题/评分模型）
 
 ## Docker 部署（推荐服务器使用）
 
