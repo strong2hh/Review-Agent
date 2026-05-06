@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Agent</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #fff6e5 0%, #e7f5ff 100%);
+        color: #1a1a1a;
+        display: grid;
+        place-items: center;
+      }
+      .card {
+        width: min(700px, 92vw);
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 20px 60px rgba(18, 38, 63, 0.18);
+      }
+      h1 {
+        margin-top: 0;
+      }
+      a.button {
+        display: inline-block;
+        background: #14532d;
+        color: white;
+        padding: 12px 18px;
+        text-decoration: none;
+        border-radius: 12px;
+      }
+      p.meta {
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>复习 Agent</h1>
+      <p>每日 09:30（UTC+8）汇总提醒邮件，进入后逐题复习。</p>
+      <a class="button" href="/review">开始今日复习</a>
+      <a class="button" href="/admin/knowledge-points" style="margin-left: 8px; background: #0c4a6e">后台录入知识点</a>
+      <p class="meta">你也可以通过 API 创建知识点并设置邮箱。</p>
+    </div>
+  </body>
+</html>

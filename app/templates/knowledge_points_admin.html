@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>后台录入知识点</title>
+    <style>
+      :root {
+        --bg-main: #f7f9ff;
+        --bg-panel: rgba(255, 255, 255, 0.92);
+        --line: #dbe4ff;
+        --text-primary: #1f2a44;
+        --text-muted: #51607d;
+        --brand: #14532d;
+        --brand-alt: #1d4ed8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text-primary);
+        background: radial-gradient(circle at 10% 10%, #fdeed5, transparent 40%),
+          radial-gradient(circle at 90% 15%, #ddf7ff, transparent 36%), var(--bg-main);
+      }
+      .wrap {
+        width: min(1120px, 94vw);
+        margin: 24px auto 36px;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 30px;
+      }
+      .link {
+        color: #1e3a8a;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--bg-panel);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+      }
+      h2 {
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+      .muted {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-top: 0;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 6px;
+        font-size: 14px;
+        color: #334155;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+        background: #fff;
+      }
+      textarea {
+        min-height: 130px;
+        resize: vertical;
+      }
+      .btn-row {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.primary {
+        background: var(--brand);
+      }
+      button.secondary {
+        background: var(--brand-alt);
+      }
+      button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      .feedback {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 14px;
+        display: none;
+      }
+      .feedback.ok {
+        display: block;
+        background: #ecfdf5;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .feedback.error {
+        display: block;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+      .list {
+        margin-top: 6px;
+        max-height: 540px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+      .item {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #fff;
+      }
+      .item h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .item p {
+        margin: 0;
+        white-space: pre-wrap;
+        color: #334155;
+        font-size: 14px;
+      }
+      .meta {
+        margin-top: 6px;
+        color: #64748b;
+        font-size: 12px;
+      }
+      .item-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+      }
+      .action-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: #fff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .action-edit {
+        background: #2563eb;
+      }
+      .action-delete {
+        background: #b91c1c;
+      }
+      @media (max-width: 880px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1>后台录入知识点</h1>
+        <a class="link" href="/">返回首页</a>
+      </div>
+      <div class="grid">
+        <div class="panel">
+          <h2>单条录入</h2>
+          <p class="muted">填写标题、内容和标签，提交后会立即进入复习队列。</p>
+          <form id="create-form">
+            <label for="title">标题</label>
+            <input id="title" type="text" placeholder="例如：TCP 三次握手" required />
+
+            <label for="content">内容</label>
+            <textarea id="content" placeholder="例如：SYN -> SYN-ACK -> ACK" required></textarea>
+
+            <label for="tags">标签（逗号分隔）</label>
+            <input id="tags" type="text" placeholder="network, tcp" />
+
+            <div class="btn-row">
+              <button id="create-btn" class="primary" type="submit">保存知识点</button>
+              <button id="cancel-edit-btn" class="secondary" type="button" style="display: none">取消编辑</button>
+            </div>
+          </form>
+          <div id="create-feedback" class="feedback"></div>
+        </div>
+
+        <div class="panel">
+          <h2>批量导入</h2>
+          <p class="muted">支持 `csv`（每行: 标题,内容）或 `markdown`（`## 标题` + 正文）。</p>
+          <form id="import-form">
+            <label for="import-format">导入格式</label>
+            <select id="import-format">
+              <option value="csv">csv</option>
+              <option value="markdown">markdown</option>
+            </select>
+
+            <label for="import-payload">导入内容</label>
+            <textarea id="import-payload" placeholder="TCP 三次握手,SYN SYN-ACK ACK"></textarea>
+
+            <div class="btn-row">
+              <button id="import-btn" class="secondary" type="submit">执行导入</button>
+            </div>
+          </form>
+          <div id="import-feedback" class="feedback"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 16px">
+        <h2>最近录入知识点</h2>
+        <p class="muted">默认展示最新 50 条，可在列表中直接编辑或删除。</p>
+        <div id="list" class="list"></div>
+      </div>
+    </div>
+    <script src="/static/knowledge_points_admin.js"></script>
+  </body>
+</html>

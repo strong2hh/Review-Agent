@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>逐题复习</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 15% 15%, #d5f5e3, transparent 35%),
+          radial-gradient(circle at 85% 20%, #ffe5d4, transparent 30%),
+          linear-gradient(180deg, #f6fff9, #f7fbff);
+        color: #0f172a;
+      }
+      .wrap {
+        width: min(920px, 94vw);
+        margin: 30px auto;
+      }
+      .panel {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 18px 48px rgba(16, 24, 40, 0.14);
+      }
+      textarea {
+        width: 100%;
+        min-height: 150px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        padding: 12px;
+        font-size: 14px;
+      }
+      button {
+        margin-top: 12px;
+        border: 0;
+        background: #0c4a6e;
+        color: white;
+        border-radius: 10px;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      .result {
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .muted {
+        color: #334155;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="panel">
+        <h1>逐题复习</h1>
+        <p id="progress" class="muted">正在加载复习队列...</p>
+        <h2 id="title"></h2>
+        <p id="question"></p>
+        <textarea id="answer" placeholder="请输入你的答案"></textarea>
+        <br />
+        <button id="submit-btn">提交并进入下一题</button>
+
+        <div id="result" class="result" style="display: none"></div>
+      </div>
+    </div>
+    <script src="/static/review.js"></script>
+  </body>
+</html>

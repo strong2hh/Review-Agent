@@ -1,0 +1,29 @@
+services:
+  review-agent:
+    build: .
+    container_name: review-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Shanghai}
+      REVIEW_ENTRY_URL: ${REVIEW_ENTRY_URL:-http://localhost:8000/review}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/review_agent.db}
+      RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_APP_PASSWORD: ${SMTP_APP_PASSWORD:-}
+      SEND_EMPTY_DIGEST: ${SEND_EMPTY_DIGEST:-0}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-}
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      GLM_BASE_URL: ${GLM_BASE_URL:-}
+      MODEL_FAILURE_ALERT_COOLDOWN_HOURS: ${MODEL_FAILURE_ALERT_COOLDOWN_HOURS:-6}
+    volumes:
+      - review-agent-data:/data
+
+volumes:
+  review-agent-data:
