@@ -225,7 +225,12 @@ importForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ format, payload }),
     });
     const data = await parseJsonOrThrow(resp);
-    showFeedback(importFeedbackEl, true, `导入完成，新增 ${data.created || 0} 条`);
+    const created = data.created || 0;
+    if (created === 0) {
+      showFeedback(importFeedbackEl, false, "未解析到知识点。请检查格式：csv 每行“标题,内容”；markdown 使用 #/## 标题 + 正文。");
+    } else {
+      showFeedback(importFeedbackEl, true, `导入完成，新增 ${created} 条`);
+    }
     await loadKnowledgePoints();
   } catch (err) {
     showFeedback(importFeedbackEl, false, `导入失败：${toErrorMessage(err)}`);

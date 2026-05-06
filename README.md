@@ -118,3 +118,8 @@ SEND_EMPTY_DIGEST=0
 - `POST /api/settings/models`
 - `POST /api/settings/model`（兼容旧接口，deprecated）
 - `POST /api/settings/email`
+
+批量导入格式说明：
+
+- `csv`：每行一条，格式为 `标题,内容`
+- `markdown`：使用 `#` / `##` / ... `######` 作为标题行，标题下方正文作为内容

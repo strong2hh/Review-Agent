@@ -148,6 +148,27 @@ def test_models_provider_list_and_channels_update():
     assert body["grading_provider"] == "glm"
 
 
+def test_markdown_import_supports_hash_headings():
+    payload = """# HTTP 缓存
+ETag 和 Cache-Control 是核心机制。
+
+## TCP 三次握手
+SYN -> SYN-ACK -> ACK
+"""
+    import_resp = client.post(
+        "/api/knowledge-points/import",
+        json={"format": "markdown", "payload": payload},
+    )
+    assert import_resp.status_code == 200
+    assert import_resp.json()["created"] == 2
+
+    list_resp = client.get("/api/knowledge-points?limit=10")
+    assert list_resp.status_code == 200
+    titles = [row["title"] for row in list_resp.json()]
+    assert "HTTP 缓存" in titles
+    assert "TCP 三次握手" in titles
+
+
 def test_legacy_settings_model_route_updates_grading_channel():
     resp = client.post(
         "/api/settings/model",

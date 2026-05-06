@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -361,21 +362,30 @@ def _parse_import_payload(fmt: str, raw: str) -> list[tuple[str, str]]:
             out.append((parts[0].strip(), parts[1].strip()))
         return out
 
+    heading_re = re.compile(r"^\s*#{1,6}\s+(.+?)\s*$")
     chunks: list[tuple[str, str]] = []
     title: Optional[str] = None
     body_lines: list[str] = []
 
-    for line in raw.splitlines():
-        if line.strip().startswith("## "):
-            if title and body_lines:
-                chunks.append((title, "\n".join(body_lines).strip()))
-            title = line.strip()[3:].strip()
+    for raw_line in raw.splitlines():
+        line = raw_line.lstrip("\ufeff")
+        match = heading_re.match(line)
+        if match:
+            if title:
+                content = "\n".join(body_lines).strip()
+                if content:
+                    chunks.append((title, content))
+            title = match.group(1).strip()
             body_lines = []
-        else:
-            body_lines.append(line)
+            continue
 
-    if title and body_lines:
-        chunks.append((title, "\n".join(body_lines).strip()))
+        if title:
+            body_lines.append(raw_line)
+
+    if title:
+        content = "\n".join(body_lines).strip()
+        if content:
+            chunks.append((title, content))
 
     return chunks
 
