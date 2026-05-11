@@ -19,6 +19,7 @@ class GradeResult:
     score: int
     correction: str
     key_points: str
+    missing_parts: list[str]
 
 
 class DeepSeekProvider:
@@ -55,7 +56,18 @@ class DeepSeekProvider:
                     "content": (
                         "你是严格但友好的阅卷老师。"
                         "请基于题目、参考知识点和学生答案评分。"
-                        "只输出 JSON，字段必须包含 score(0-100整数), correction(字符串), key_points(字符串)。"
+                        "请按语义判断，不要机械逐字匹配；学生用不同表述但含义正确的内容应视为已答到。"
+                        "评分必须精细到 0-100 的整数，不要习惯性给 60、70、80、90 这类整十分，"
+                        "也不要总是给 65、75、85 这类整五分；请根据答案的覆盖度、准确性、"
+                        "关键遗漏数量、错误严重程度和表达清晰度给出有区分度的个位数分数。"
+                        "如果确实刚好符合整十或整五才可以使用，否则优先给更精确的分数。"
+                        "评分参考：核心概念基本错误低于 40；只答到少量要点为 40-59；"
+                        "答到主要方向但遗漏明显为 60-74；覆盖多数关键点为 75-89；"
+                        "准确完整且有清晰例子为 90-100。"
+                        "missing_parts 只列出参考知识点中学生未回答或明显回答不完整的关键内容，"
+                        "如果没有明显遗漏则返回空数组。"
+                        "只输出 JSON，字段必须包含 score(0-100整数), correction(字符串), "
+                        "key_points(字符串), missing_parts(字符串数组)。"
                     ),
                 },
                 {
@@ -128,9 +140,12 @@ def _validate_grade_result(data: dict[str, Any]) -> GradeResult:
     score_raw = data.get("score")
     correction_raw = data.get("correction")
     key_points_raw = data.get("key_points")
+    missing_parts_raw = data.get("missing_parts")
 
     if not isinstance(correction_raw, str) or not isinstance(key_points_raw, str):
         raise ModelCallError("grading_invalid_schema:text_fields")
+    if not isinstance(missing_parts_raw, list):
+        raise ModelCallError("grading_invalid_schema:missing_parts")
 
     try:
         score = int(score_raw)
@@ -140,7 +155,13 @@ def _validate_grade_result(data: dict[str, Any]) -> GradeResult:
     if score < 0 or score > 100:
         raise ModelCallError("grading_invalid_schema:score_range")
 
-    return GradeResult(score=score, correction=correction_raw.strip(), key_points=key_points_raw.strip())
+    missing_parts = [str(item).strip() for item in missing_parts_raw if str(item).strip()]
+    return GradeResult(
+        score=score,
+        correction=correction_raw.strip(),
+        key_points=key_points_raw.strip(),
+        missing_parts=missing_parts[:12],
+    )
 
 
 def _safe_json_strict(text: str) -> dict[str, Any]:

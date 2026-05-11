@@ -26,7 +26,10 @@ def fake_deepseek(monkeypatch):
         system_prompt = messages[0]["content"]
         if "简答题" in system_prompt:
             return '{"question":"请解释这个知识点的核心含义。"}'
-        return '{"score":80,"correction":"回答基本正确。","key_points":"核心要点"}'
+        return (
+            '{"score":80,"correction":"回答基本正确。","key_points":"核心要点",'
+            '"missing_parts":["补充一个实际例子"]}'
+        )
 
     monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _fake_chat_completion)
 
