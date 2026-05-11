@@ -162,9 +162,9 @@ def _send_failure_alert(
     consecutive_failures: int,
     error: str,
 ) -> bool:
-    if not cfg.recipient_email:
+    if not app_settings.recipient_email:
         return False
-    if not (cfg.smtp_user and cfg.smtp_app_password and cfg.smtp_from):
+    if not (app_settings.smtp_user and app_settings.smtp_app_password and app_settings.smtp_from):
         return False
 
     subject = f"[Review Agent] 模型任务失败告警: {task_type}"
@@ -179,14 +179,14 @@ def _send_failure_alert(
 
     msg = MIMEText(body, "html", "utf-8")
     msg["Subject"] = subject
-    msg["From"] = cfg.smtp_from
-    msg["To"] = cfg.recipient_email
+    msg["From"] = app_settings.smtp_from
+    msg["To"] = app_settings.recipient_email
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(cfg.smtp_user, cfg.smtp_app_password)
-            server.sendmail(cfg.smtp_from, [cfg.recipient_email], msg.as_string())
+            server.login(app_settings.smtp_user, app_settings.smtp_app_password)
+            server.sendmail(app_settings.smtp_from, [app_settings.recipient_email], msg.as_string())
         return True
     except Exception:
         return False

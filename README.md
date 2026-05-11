@@ -90,6 +90,8 @@ docker compose up -d
 - `SMTP_APP_PASSWORD`（Gmail 应用专用密码）
 - `SEND_EMPTY_DIGEST`（`1` 表示无到期项也发送提醒）
 
+邮件配置只从环境变量读取，不写入数据库。修改 `.env` 后需要重启容器/服务生效。
+
 你也可以在项目根目录放 `.env`，启动时会自动读取，例如：
 
 ```env
@@ -119,7 +121,6 @@ SEND_EMPTY_DIGEST=0
 - `GET /api/settings/models`
 - `POST /api/settings/models`
 - `POST /api/settings/model`（兼容旧接口，deprecated）
-- `POST /api/settings/email`
 
 批量导入格式说明：
 

@@ -18,10 +18,10 @@ class Settings:
     reminder_minute: int = int(os.getenv("REMINDER_MINUTE", "0"))
     smtp_host: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
-    recipient_email: str = os.getenv("RECIPIENT_EMAIL", "")
-    smtp_from: str = os.getenv("SMTP_FROM", "")
-    smtp_user: str = os.getenv("SMTP_USER", "")
-    smtp_app_password: str = os.getenv("SMTP_APP_PASSWORD", "")
+    recipient_email: str = os.getenv("RECIPIENT_EMAIL", "").strip()
+    smtp_from: str = os.getenv("SMTP_FROM", "").strip()
+    smtp_user: str = os.getenv("SMTP_USER", "").strip()
+    smtp_app_password: str = os.getenv("SMTP_APP_PASSWORD", "").replace(" ", "").strip()
     send_empty_digest: int = 1 if os.getenv("SEND_EMPTY_DIGEST", "0") == "1" else 0
 
 

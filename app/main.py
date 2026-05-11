@@ -337,25 +337,6 @@ def update_model_config(payload: ModelConfigUpdate, db: Session = Depends(get_db
     }
 
 
-@app.post("/api/settings/email")
-def update_email_settings(
-    recipient_email: str,
-    smtp_from: str,
-    smtp_user: str,
-    smtp_app_password: str,
-    send_empty_digest: int = 0,
-    db: Session = Depends(get_db),
-):
-    setting = get_or_create_settings(db)
-    setting.recipient_email = recipient_email
-    setting.smtp_from = smtp_from
-    setting.smtp_user = smtp_user
-    setting.smtp_app_password = smtp_app_password
-    setting.send_empty_digest = 1 if send_empty_digest else 0
-    db.commit()
-    return {"ok": True}
-
-
 @app.post("/api/reminder/run-daily-debug", response_model=ReminderRunResponse)
 def run_daily_debug(db: Session = Depends(get_db)):
     status, due_count, message = run_daily_reminder(

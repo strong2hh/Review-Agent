@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./test_review_agent.db"
@@ -23,7 +24,17 @@ def setup_function():
         db.close()
 
 
-def test_daily_digest_only_once_per_day():
+def test_daily_digest_only_once_per_day(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.reminder_service.app_settings",
+        SimpleNamespace(
+            recipient_email="test@example.com",
+            smtp_from="test@example.com",
+            smtp_user="test@example.com",
+            smtp_app_password="app-pass",
+            send_empty_digest=0,
+        ),
+    )
     db = SessionLocal()
     now = datetime(2026, 4, 14, 1, 30, 0)
 
@@ -38,15 +49,7 @@ def test_daily_digest_only_once_per_day():
                 next_review_at=now - timedelta(days=1),
             )
         )
-        setting = AppSetting(
-            id=1,
-            recipient_email="test@example.com",
-            smtp_from="test@example.com",
-            smtp_user="test@example.com",
-            smtp_app_password="app-pass",
-            send_empty_digest=0,
-        )
-        db.add(setting)
+        db.add(AppSetting(id=1))
         db.commit()
 
         status_1, due_count_1, _ = run_daily_reminder(

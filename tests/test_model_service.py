@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./test_review_agent.db"
@@ -61,24 +62,21 @@ def setup_function():
 
 def test_failure_alert_sent_once_within_cooldown(monkeypatch):
     monkeypatch.setattr("app.services.model_service.smtplib.SMTP", DummySMTP)
+    monkeypatch.setattr(
+        "app.services.model_service.app_settings",
+        SimpleNamespace(
+            recipient_email="alert@example.com",
+            smtp_from="alert@example.com",
+            smtp_user="alert@example.com",
+            smtp_app_password="dummy-pass",
+        ),
+    )
 
     create_resp = client.post(
         "/api/knowledge-points",
         json={"title": "缓存一致性", "content": "Cache Invalidation, TTL, Version", "tags": []},
     )
     assert create_resp.status_code == 200
-
-    email_resp = client.post(
-        "/api/settings/email",
-        params={
-            "recipient_email": "alert@example.com",
-            "smtp_from": "alert@example.com",
-            "smtp_user": "alert@example.com",
-            "smtp_app_password": "dummy-pass",
-            "send_empty_digest": 0,
-        },
-    )
-    assert email_resp.status_code == 200
 
     channel_resp = client.post(
         "/api/settings/models",

@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.config import settings as app_settings
 from app.models import AppSetting, KnowledgePoint, ReminderLog
 from app.services.settings_service import get_or_create_settings
 
@@ -25,7 +26,7 @@ class GmailSmtpSender(EmailSender):
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(settings.smtp_user, settings.smtp_app_password)
+            server.login(app_settings.smtp_user, app_settings.smtp_app_password)
             server.sendmail(from_email, [to_email], msg.as_string())
         return f"smtp-{int(datetime.utcnow().timestamp())}"
 
@@ -73,17 +74,17 @@ def run_daily_reminder(
         ).all()
     )
 
-    if not due_items and settings.send_empty_digest == 0:
+    if not due_items and app_settings.send_empty_digest == 0:
         db.add(ReminderLog(sent_at=now, status="skipped", due_count=0, notes="no due items"))
         db.commit()
         return "skipped", 0, "no due items"
 
-    if not settings.recipient_email:
+    if not app_settings.recipient_email:
         db.add(ReminderLog(sent_at=now, status="failed", due_count=len(due_items), notes="recipient missing"))
         db.commit()
         return "failed", len(due_items), "recipient email is not configured"
 
-    if not (settings.smtp_user and settings.smtp_app_password and settings.smtp_from):
+    if not (app_settings.smtp_user and app_settings.smtp_app_password and app_settings.smtp_from):
         db.add(
             ReminderLog(sent_at=now, status="failed", due_count=len(due_items), notes="smtp credentials missing")
         )
@@ -95,8 +96,8 @@ def run_daily_reminder(
 
     try:
         message_id = sender.send(
-            to_email=settings.recipient_email,
-            from_email=settings.smtp_from,
+            to_email=app_settings.recipient_email,
+            from_email=app_settings.smtp_from,
             subject=subject,
             html_body=body,
             settings=settings,
