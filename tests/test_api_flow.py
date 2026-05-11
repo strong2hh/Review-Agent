@@ -1,4 +1,5 @@
 import os
+import time
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./test_review_agent.db"
@@ -11,7 +12,15 @@ from sqlalchemy import delete
 
 from app.database import SessionLocal, init_db
 from app.main import app
-from app.models import AppSetting, KnowledgePoint, ModelTaskFailure, ReviewAttempt, ReviewSession, ReviewSessionItem
+from app.models import (
+    AppSetting,
+    KnowledgePoint,
+    ModelTaskFailure,
+    ReviewAttempt,
+    ReviewGradingJob,
+    ReviewSession,
+    ReviewSessionItem,
+)
 from app.services.llm import ModelCallError
 
 
@@ -22,10 +31,8 @@ client = TestClient(app)
 def fake_deepseek(monkeypatch):
     def _fake_chat_completion(self, messages, temperature):
         _ = self
+        _ = messages
         _ = temperature
-        system_prompt = messages[0]["content"]
-        if "简答题" in system_prompt:
-            return '{"question":"请解释这个知识点的核心含义。"}'
         return (
             '{"score":80,"correction":"回答基本正确。","key_points":"核心要点",'
             '"missing_parts":["补充一个实际例子"]}'
@@ -38,6 +45,7 @@ def setup_function():
     init_db()
     db = SessionLocal()
     try:
+        db.execute(delete(ReviewGradingJob))
         db.execute(delete(ReviewSessionItem))
         db.execute(delete(ReviewSession))
         db.execute(delete(ReviewAttempt))
@@ -47,6 +55,18 @@ def setup_function():
         db.commit()
     finally:
         db.close()
+
+
+def wait_for_grading(job_id: int, expected_status: str = "completed") -> dict:
+    last = {}
+    for _ in range(50):
+        resp = client.get(f"/api/review/grading-jobs/{job_id}")
+        assert resp.status_code == 200
+        last = resp.json()
+        if last["status"] == expected_status:
+            return last
+        time.sleep(0.05)
+    raise AssertionError(f"grading job {job_id} did not reach {expected_status}: {last}")
 
 
 def test_review_session_end_to_end():
@@ -74,8 +94,11 @@ def test_review_session_end_to_end():
     result = submit_resp.json()
 
     assert result["completed"] is True
-    assert 0 <= result["score_0_100"] <= 100
+    assert result["grading_status"] == "pending"
     assert result["next_question"] is None
+
+    grading = wait_for_grading(result["grading_job_id"])
+    assert 0 <= grading["score_0_100"] <= 100
 
     status_resp = client.get(f"/api/review/session/{session_id}")
     assert status_resp.status_code == 200
@@ -132,6 +155,8 @@ def test_submit_answer_returns_next_title_for_following_question():
     assert body["completed"] is False
     assert isinstance(body["next_title"], str)
     assert len(body["next_title"]) > 0
+    assert body["grading_status"] == "pending"
+    assert wait_for_grading(body["grading_job_id"])["status"] == "completed"
 
 
 def test_knowledge_point_update_and_delete():
@@ -199,10 +224,8 @@ def test_model_settings_routes_are_removed():
 def test_grading_failure_does_not_update_mastery_and_records_failures(monkeypatch):
     def _generation_ok_grading_fails(self, messages, temperature):
         _ = self
+        _ = messages
         _ = temperature
-        system_prompt = messages[0]["content"]
-        if "简答题" in system_prompt:
-            return '{"question":"请解释 HTTP 缓存。"}'
         raise ModelCallError("forced_deepseek_failure")
 
     monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _generation_ok_grading_fails)
@@ -221,7 +244,10 @@ def test_grading_failure_does_not_update_mastery_and_records_failures(monkeypatc
         f"/api/review/session/{session_id}/answer",
         json={"answer": "这是我的回答"},
     )
-    assert submit_resp.status_code == 503
+    assert submit_resp.status_code == 200
+    job_id = submit_resp.json()["grading_job_id"]
+    failed = wait_for_grading(job_id, expected_status="failed")
+    assert "forced_deepseek_failure" in failed["error"]
 
     db = SessionLocal()
     try:

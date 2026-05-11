@@ -21,26 +21,11 @@ BACKOFF_BASE_SEC = 0.0 if app_settings.app_env == "test" else float(os.getenv("M
 
 
 class TaskType:
-    QUESTION_GENERATION = "question_generation"
     GRADING = "grading"
 
 
 class ModelExecutionError(Exception):
     pass
-
-
-def run_question_generation(db: Session, title: str, content: str, now: datetime) -> str:
-    def _op() -> str:
-        return DeepSeekProvider().generate_question(title, content)
-
-    return _run_with_retry(
-        db=db,
-        task_type=TaskType.QUESTION_GENERATION,
-        provider_name="deepseek",
-        model_name=app_settings.deepseek_model,
-        now=now,
-        operation=_op,
-    )
 
 
 def run_grading(

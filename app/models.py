@@ -41,6 +41,24 @@ class ReviewAttempt(Base):
     knowledge_point: Mapped[KnowledgePoint] = relationship(back_populates="attempts")
 
 
+class ReviewGradingJob(Base):
+    __tablename__ = "review_grading_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    session_item_id: Mapped[int] = mapped_column(ForeignKey("review_session_items.id"), nullable=False, unique=True)
+    user_answer: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    missing_parts: Mapped[str] = mapped_column(Text, default="[]")
+    mastery_before: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    mastery_after: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    next_review_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    session_item: Mapped[ReviewSessionItem] = relationship()
+
+
 class ReviewSession(Base):
     __tablename__ = "review_sessions"
 

@@ -23,30 +23,7 @@ class GradeResult:
 
 
 class DeepSeekProvider:
-    """DeepSeek-only LLM client for question generation and grading."""
-
-    def generate_question(self, title: str, content: str) -> str:
-        text = self._chat_completion(
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "你是教学助手。请根据给定知识点出一道简答题。"
-                        "只输出 JSON，格式: {\"question\":\"...\"}。"
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"知识点标题：{title}\n知识点内容：{content}",
-                },
-            ],
-            temperature=0.2,
-        )
-        data = _safe_json_strict(text)
-        question = data.get("question")
-        if not isinstance(question, str) or not question.strip():
-            raise ModelCallError("question_generation_invalid_schema")
-        return question.strip()
+    """DeepSeek-only LLM client for grading review answers."""
 
     def grade_answer(self, question: str, reference: str, user_answer: str) -> GradeResult:
         text = self._chat_completion(

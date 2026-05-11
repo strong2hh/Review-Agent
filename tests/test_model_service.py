@@ -1,4 +1,5 @@
 import os
+import time
 from types import SimpleNamespace
 
 os.environ["APP_ENV"] = "test"
@@ -9,7 +10,16 @@ from sqlalchemy import delete
 
 from app.database import SessionLocal, init_db
 from app.main import app
-from app.models import AppSetting, KnowledgePoint, ModelTaskFailure, ReminderLog, ReviewAttempt, ReviewSession, ReviewSessionItem
+from app.models import (
+    AppSetting,
+    KnowledgePoint,
+    ModelTaskFailure,
+    ReminderLog,
+    ReviewAttempt,
+    ReviewGradingJob,
+    ReviewSession,
+    ReviewSessionItem,
+)
 from app.services.llm import ModelCallError
 
 
@@ -49,6 +59,7 @@ def setup_function():
     init_db()
     db = SessionLocal()
     try:
+        db.execute(delete(ReviewGradingJob))
         db.execute(delete(ReviewSessionItem))
         db.execute(delete(ReviewSession))
         db.execute(delete(ReviewAttempt))
@@ -59,6 +70,18 @@ def setup_function():
         db.commit()
     finally:
         db.close()
+
+
+def wait_for_grading(job_id: int, expected_status: str = "failed") -> dict:
+    last = {}
+    for _ in range(50):
+        resp = client.get(f"/api/review/grading-jobs/{job_id}")
+        assert resp.status_code == 200
+        last = resp.json()
+        if last["status"] == expected_status:
+            return last
+        time.sleep(0.05)
+    raise AssertionError(f"grading job {job_id} did not reach {expected_status}: {last}")
 
 
 def test_failure_alert_sent_once_within_cooldown(monkeypatch):
@@ -76,10 +99,8 @@ def test_failure_alert_sent_once_within_cooldown(monkeypatch):
 
     def _generation_ok_grading_fails(self, messages, temperature):
         _ = self
+        _ = messages
         _ = temperature
-        system_prompt = messages[0]["content"]
-        if "简答题" in system_prompt:
-            return '{"question":"请解释缓存一致性。"}'
         raise ModelCallError("forced_deepseek_failure")
 
     monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _generation_ok_grading_fails)
@@ -89,6 +110,11 @@ def test_failure_alert_sent_once_within_cooldown(monkeypatch):
         json={"title": "缓存一致性", "content": "Cache Invalidation, TTL, Version", "tags": []},
     )
     assert create_resp.status_code == 200
+    create_resp_2 = client.post(
+        "/api/knowledge-points",
+        json={"title": "缓存淘汰", "content": "LRU, LFU, TTL", "tags": []},
+    )
+    assert create_resp_2.status_code == 200
 
     start_resp = client.post("/api/review/session/start", json={})
     assert start_resp.status_code == 200
@@ -102,8 +128,10 @@ def test_failure_alert_sent_once_within_cooldown(monkeypatch):
         f"/api/review/session/{session_id}/answer",
         json={"answer": "第二次失败"},
     )
-    assert fail_1.status_code == 503
-    assert fail_2.status_code == 503
+    assert fail_1.status_code == 200
+    assert fail_2.status_code == 200
+    wait_for_grading(fail_1.json()["grading_job_id"])
+    wait_for_grading(fail_2.json()["grading_job_id"])
 
     db = SessionLocal()
     try:

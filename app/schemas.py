@@ -52,19 +52,38 @@ class SubmitAnswerRequest(BaseModel):
 class SubmitAnswerResponse(BaseModel):
     session_id: int
     question_id: int
-    score_0_100: int
-    star_0_5: int
-    correction: str
-    key_points: str
-    missing_parts: list[str]
-    correct_answer: str
-    mastery_before: float
-    mastery_after: float
-    next_review_at: datetime
+    grading_job_id: int
+    grading_status: str
+    score_0_100: Optional[int] = None
+    star_0_5: Optional[int] = None
+    correction: Optional[str] = None
+    key_points: Optional[str] = None
+    missing_parts: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    mastery_before: Optional[float] = None
+    mastery_after: Optional[float] = None
+    next_review_at: Optional[datetime] = None
     next_question_id: Optional[int]
     next_title: Optional[str]
     next_question: Optional[str]
     completed: bool
+
+
+class GradingResultResponse(BaseModel):
+    grading_job_id: int
+    status: str
+    error: str
+    question_id: int
+    title: str
+    score_0_100: Optional[int] = None
+    star_0_5: Optional[int] = None
+    correction: Optional[str] = None
+    key_points: Optional[str] = None
+    missing_parts: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    mastery_before: Optional[float] = None
+    mastery_after: Optional[float] = None
+    next_review_at: Optional[datetime] = None
 
 
 class ReminderRunResponse(BaseModel):

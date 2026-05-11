@@ -50,6 +50,78 @@ function updateProgress() {
   progressEl.textContent = `第 ${currentIndex} / ${totalQuestions} 题`;
 }
 
+function ensureResultArea() {
+  resultEl.style.display = "block";
+}
+
+function appendPendingGrading(jobId, title) {
+  ensureResultArea();
+  const card = document.createElement("div");
+  card.className = "grading-card pending";
+  card.id = `grading-job-${jobId}`;
+  card.innerHTML = `
+    <div><strong>${escapeHtml(title || "上一题")}</strong></div>
+    <p class="result-empty">正在评分，请稍等...</p>
+  `;
+  resultEl.prepend(card);
+  pollGradingJob(jobId, 0);
+}
+
+function renderCompletedGrading(card, data) {
+  card.className = "grading-card completed";
+  card.innerHTML = `
+    <div><strong>${escapeHtml(data.title || "上一题")}</strong></div>
+    <div><strong>得分：</strong>${data.score_0_100} / 100（${data.star_0_5} 星）</div>
+    <div class="result-group">
+      <strong>纠错建议（未回答部分）：</strong>
+      ${renderMissingParts(data.missing_parts)}
+    </div>
+    <div class="result-group">
+      <strong>正确答案：</strong>
+      <div class="answer-scroll">${escapeHtml(data.correct_answer || "-")}</div>
+    </div>
+  `;
+}
+
+function renderFailedGrading(card, data) {
+  card.className = "grading-card failed";
+  card.innerHTML = `
+    <div><strong>${escapeHtml(data.title || "上一题")}</strong></div>
+    <p class="result-empty">评分失败：${escapeHtml(data.error || "请稍后重试")}</p>
+  `;
+}
+
+async function pollGradingJob(jobId, attempt) {
+  const card = document.getElementById(`grading-job-${jobId}`);
+  if (!card) return;
+
+  try {
+    const resp = await fetch(`/api/review/grading-jobs/${jobId}`);
+    const data = await parseJsonOrThrow(resp);
+    if (data.status === "completed") {
+      renderCompletedGrading(card, data);
+      return;
+    }
+    if (data.status === "failed") {
+      renderFailedGrading(card, data);
+      return;
+    }
+  } catch (err) {
+    if (attempt >= 60) {
+      card.className = "grading-card failed";
+      card.innerHTML = `<p class="result-empty">评分结果获取失败：${escapeHtml(toErrorMessage(err))}</p>`;
+      return;
+    }
+  }
+
+  if (attempt >= 120) {
+    card.className = "grading-card failed";
+    card.innerHTML = `<p class="result-empty">评分仍未完成，请稍后刷新页面查看。</p>`;
+    return;
+  }
+  window.setTimeout(() => pollGradingJob(jobId, attempt + 1), 1200);
+}
+
 async function startSession() {
   let data;
   try {
@@ -90,7 +162,9 @@ async function submitAnswer() {
     return;
   }
 
+  const submittedTitle = titleEl.textContent || "上一题";
   submitBtn.disabled = true;
+  submitBtn.textContent = "提交中...";
   let data;
   try {
     const resp = await fetch(`/api/review/session/${sessionId}/answer`, {
@@ -100,24 +174,17 @@ async function submitAnswer() {
     });
     data = await parseJsonOrThrow(resp);
   } catch (err) {
-    resultEl.style.display = "block";
-    resultEl.innerHTML = `<strong>提交失败：</strong>${toErrorMessage(err)}`;
+    ensureResultArea();
+    const card = document.createElement("div");
+    card.className = "grading-card failed";
+    card.innerHTML = `<strong>提交失败：</strong>${escapeHtml(toErrorMessage(err))}`;
+    resultEl.prepend(card);
     submitBtn.disabled = false;
+    submitBtn.textContent = "提交并进入下一题";
     return;
   }
 
-  resultEl.style.display = "block";
-  resultEl.innerHTML = `
-    <div><strong>得分：</strong>${data.score_0_100} / 100（${data.star_0_5} 星）</div>
-    <div class="result-group">
-      <strong>纠错建议（未回答部分）：</strong>
-      ${renderMissingParts(data.missing_parts)}
-    </div>
-    <div class="result-group">
-      <strong>正确答案：</strong>
-      <div class="answer-scroll">${escapeHtml(data.correct_answer || "-")}</div>
-    </div>
-  `;
+  appendPendingGrading(data.grading_job_id, submittedTitle);
 
   if (data.completed) {
     titleEl.textContent = "本次复习已完成";
@@ -134,6 +201,7 @@ async function submitAnswer() {
   questionEl.textContent = "";
   answerEl.value = "";
   submitBtn.disabled = false;
+  submitBtn.textContent = "提交并进入下一题";
   updateProgress();
 }
 

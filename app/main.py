@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from datetime import datetime
 from typing import Optional
 
@@ -17,6 +18,7 @@ from app.config import settings
 from app.database import SessionLocal, init_db
 from app.models import KnowledgePoint
 from app.schemas import (
+    GradingResultResponse,
     KnowledgePointCreate,
     KnowledgePointImportRequest,
     KnowledgePointOut,
@@ -27,9 +29,15 @@ from app.schemas import (
     SubmitAnswerRequest,
     SubmitAnswerResponse,
 )
-from app.services.model_service import ModelExecutionError
 from app.services.reminder_service import DummySender, GmailSmtpSender, run_daily_reminder
-from app.services.review_service import get_due_knowledge_points, get_session_status, start_review_session, submit_answer
+from app.services.review_service import (
+    complete_grading_job,
+    get_due_knowledge_points,
+    get_grading_result,
+    get_session_status,
+    start_review_session,
+    submit_answer,
+)
 from app.services.settings_service import get_or_create_settings
 
 app = FastAPI(title="Review Agent", version="1.1.0")
@@ -65,6 +73,19 @@ def _run_daily_job() -> None:
         db.close()
 
 
+def _run_grading_job_async(job_id: int) -> None:
+    db = SessionLocal()
+    try:
+        complete_grading_job(db=db, job_id=job_id, now=_now())
+    finally:
+        db.close()
+
+
+def _schedule_grading_job(job_id: int) -> None:
+    thread = threading.Thread(target=_run_grading_job_async, args=(job_id,), daemon=True)
+    thread.start()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     global scheduler
@@ -73,8 +94,18 @@ def on_startup() -> None:
     db = SessionLocal()
     try:
         get_or_create_settings(db)
+        pending_jobs = []
+        try:
+            from app.models import ReviewGradingJob
+
+            pending_jobs = [row.id for row in db.query(ReviewGradingJob).filter(ReviewGradingJob.status == "pending")]
+        except Exception:
+            pending_jobs = []
     finally:
         db.close()
+
+    for job_id in pending_jobs:
+        _schedule_grading_job(job_id)
 
     if settings.app_env == "test":
         return
@@ -208,11 +239,7 @@ def get_due(db: Session = Depends(get_db)):
 
 @app.post("/api/review/session/start", response_model=StartSessionResponse)
 def start_session(db: Session = Depends(get_db)):
-    try:
-        session, current = start_review_session(db, now=_now())
-    except ModelExecutionError as exc:
-        db.rollback()
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    session, current = start_review_session(db, now=_now())
 
     total = len(session.items)
     if not current:
@@ -241,13 +268,20 @@ def start_session(db: Session = Depends(get_db)):
 def submit_session_answer(session_id: int, payload: SubmitAnswerRequest, db: Session = Depends(get_db)):
     try:
         result = submit_answer(db=db, session_id=session_id, answer=payload.answer, now=_now())
+        _schedule_grading_job(result["grading_job_id"])
         return SubmitAnswerResponse(**result)
-    except ModelExecutionError as exc:
-        db.rollback()
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/review/grading-jobs/{job_id}", response_model=GradingResultResponse)
+def review_grading_result(job_id: int, db: Session = Depends(get_db)):
+    try:
+        result = get_grading_result(db, job_id)
+        return GradingResultResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/review/session/{session_id}", response_model=SessionStatusResponse)
