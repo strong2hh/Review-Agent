@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session, selectinload
 from app.models import KnowledgePoint, ReviewAttempt, ReviewSession, ReviewSessionItem
 from app.services.model_service import run_grading, run_question_generation
 from app.services.mastery import update_mastery_and_schedule
-from app.services.settings_service import get_or_create_settings
 
 
 def _tokenize(text: str) -> set[str]:
@@ -63,11 +62,10 @@ def get_due_knowledge_points(db: Session, now: datetime) -> list[KnowledgePoint]
 
 def start_review_session(db: Session, now: datetime) -> Tuple[ReviewSession, Optional[ReviewSessionItem]]:
     due_items = get_due_knowledge_points(db, now)
-    cfg = get_or_create_settings(db)
 
     generated_questions: list[tuple[KnowledgePoint, str]] = []
     for kp in due_items:
-        question = run_question_generation(db, cfg, kp.title, kp.content, now)
+        question = run_question_generation(db, kp.title, kp.content, now)
         generated_questions.append((kp, question))
 
     session = ReviewSession(status="in_progress", started_at=now)
@@ -118,8 +116,7 @@ def submit_answer(db: Session, session_id: int, answer: str, now: datetime) -> d
     if not kp:
         raise ValueError("knowledge point not found")
 
-    cfg = get_or_create_settings(db)
-    grade = run_grading(db, cfg, item.question, kp.content, answer, now)
+    grade = run_grading(db, item.question, kp.content, answer, now)
 
     old_mastery = kp.mastery
     new_mastery, new_stage, next_review_at, star = update_mastery_and_schedule(

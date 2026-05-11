@@ -23,6 +23,9 @@ class Settings:
     smtp_user: str = os.getenv("SMTP_USER", "").strip()
     smtp_app_password: str = os.getenv("SMTP_APP_PASSWORD", "").replace(" ", "").strip()
     send_empty_digest: int = 1 if os.getenv("SEND_EMPTY_DIGEST", "0") == "1" else 0
+    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "").strip()
+    deepseek_base_url: str = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1").strip()
+    deepseek_model: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
 
 
 settings = Settings()

@@ -20,10 +20,6 @@ from app.schemas import (
     KnowledgePointCreate,
     KnowledgePointImportRequest,
     KnowledgePointOut,
-    ModelChannelsOut,
-    ModelChannelsUpdate,
-    ModelConfigUpdate,
-    ProviderSpecOut,
     ReminderRunResponse,
     ReviewDueItem,
     SessionStatusResponse,
@@ -31,7 +27,6 @@ from app.schemas import (
     SubmitAnswerRequest,
     SubmitAnswerResponse,
 )
-from app.services.llm import list_provider_specs
 from app.services.model_service import ModelExecutionError
 from app.services.reminder_service import DummySender, GmailSmtpSender, run_daily_reminder
 from app.services.review_service import get_due_knowledge_points, get_session_status, start_review_session, submit_answer
@@ -115,11 +110,6 @@ def review_page(request: Request):
 @app.get("/admin/knowledge-points", response_class=HTMLResponse)
 def knowledge_point_admin_page(request: Request):
     return templates.TemplateResponse("knowledge_points_admin.html", {"request": request})
-
-
-@app.get("/admin/model-settings", response_class=HTMLResponse)
-def model_settings_page(request: Request):
-    return templates.TemplateResponse("model_settings.html", {"request": request})
 
 
 @app.post("/api/knowledge-points", response_model=KnowledgePointOut)
@@ -279,62 +269,6 @@ def run_daily(db: Session = Depends(get_db)):
         sender=sender,
     )
     return ReminderRunResponse(status=status, due_count=due_count, message=message)
-
-
-@app.get("/api/models/providers", response_model=list[ProviderSpecOut])
-def model_providers():
-    return [ProviderSpecOut(**x) for x in list_provider_specs()]
-
-
-@app.get("/api/settings/models", response_model=ModelChannelsOut)
-def get_model_channels(db: Session = Depends(get_db)):
-    setting = get_or_create_settings(db)
-    return ModelChannelsOut(
-        question_provider=setting.question_provider,
-        question_model=setting.question_model,
-        grading_provider=setting.grading_provider,
-        grading_model=setting.grading_model,
-    )
-
-
-@app.post("/api/settings/models", response_model=ModelChannelsOut)
-def update_model_channels(payload: ModelChannelsUpdate, db: Session = Depends(get_db)):
-    setting = get_or_create_settings(db)
-    setting.question_provider = payload.question_provider.strip().lower()
-    setting.question_model = payload.question_model.strip()
-    setting.grading_provider = payload.grading_provider.strip().lower()
-    setting.grading_model = payload.grading_model.strip()
-
-    # keep legacy fields synced for backward compatibility
-    setting.model_provider = setting.grading_provider
-    setting.model_name = setting.grading_model
-
-    db.commit()
-    return ModelChannelsOut(
-        question_provider=setting.question_provider,
-        question_model=setting.question_model,
-        grading_provider=setting.grading_provider,
-        grading_model=setting.grading_model,
-    )
-
-
-@app.post("/api/settings/model")
-def update_model_config(payload: ModelConfigUpdate, db: Session = Depends(get_db)):
-    # deprecated compatibility route: now maps to grading_* channel
-    setting = get_or_create_settings(db)
-    setting.model_provider = payload.model_provider.strip().lower()
-    setting.model_name = payload.model_name.strip()
-    setting.grading_provider = setting.model_provider
-    setting.grading_model = setting.model_name
-    db.commit()
-    return {
-        "ok": True,
-        "deprecated": True,
-        "model_provider": setting.model_provider,
-        "model_name": setting.model_name,
-        "grading_provider": setting.grading_provider,
-        "grading_model": setting.grading_model,
-    }
 
 
 @app.post("/api/reminder/run-daily-debug", response_model=ReminderRunResponse)

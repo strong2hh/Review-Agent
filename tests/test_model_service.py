@@ -10,6 +10,7 @@ from sqlalchemy import delete
 from app.database import SessionLocal, init_db
 from app.main import app
 from app.models import AppSetting, KnowledgePoint, ModelTaskFailure, ReminderLog, ReviewAttempt, ReviewSession, ReviewSessionItem
+from app.services.llm import ModelCallError
 
 
 class DummySMTP:
@@ -69,25 +70,25 @@ def test_failure_alert_sent_once_within_cooldown(monkeypatch):
             smtp_from="alert@example.com",
             smtp_user="alert@example.com",
             smtp_app_password="dummy-pass",
+            deepseek_model="deepseek-chat",
         ),
     )
+
+    def _generation_ok_grading_fails(self, messages, temperature):
+        _ = self
+        _ = temperature
+        system_prompt = messages[0]["content"]
+        if "简答题" in system_prompt:
+            return '{"question":"请解释缓存一致性。"}'
+        raise ModelCallError("forced_deepseek_failure")
+
+    monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _generation_ok_grading_fails)
 
     create_resp = client.post(
         "/api/knowledge-points",
         json={"title": "缓存一致性", "content": "Cache Invalidation, TTL, Version", "tags": []},
     )
     assert create_resp.status_code == 200
-
-    channel_resp = client.post(
-        "/api/settings/models",
-        json={
-            "question_provider": "mock",
-            "question_model": "mock-q-v1",
-            "grading_provider": "openai",
-            "grading_model": "gpt-4o-mini",
-        },
-    )
-    assert channel_resp.status_code == 200
 
     start_resp = client.post("/api/review/session/start", json={})
     assert start_resp.status_code == 200

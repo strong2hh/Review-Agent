@@ -82,6 +82,8 @@ class AppSetting(Base):
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    # Legacy columns kept only so existing SQLite databases with NOT NULL model
+    # fields can still insert/update the singleton settings row after deploy.
     model_provider: Mapped[str] = mapped_column(String(50), default="deepseek")
     model_name: Mapped[str] = mapped_column(String(100), default="deepseek-chat")
     question_provider: Mapped[str] = mapped_column(String(50), default="deepseek")

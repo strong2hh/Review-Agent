@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class KnowledgePointCreate(BaseModel):
@@ -71,37 +71,6 @@ class ReminderRunResponse(BaseModel):
     status: str
     due_count: int
     message: str
-
-
-class ModelConfigUpdate(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
-    model_provider: str
-    model_name: str
-
-
-class ModelChannelsUpdate(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
-    question_provider: str
-    question_model: str
-    grading_provider: str
-    grading_model: str
-
-
-class ModelChannelsOut(BaseModel):
-    question_provider: str
-    question_model: str
-    grading_provider: str
-    grading_model: str
-
-
-class ProviderSpecOut(BaseModel):
-    provider: str
-    label: str
-    default_base_url: str
-    base_url_env: str
-    api_key_env: str
-    supports_question: bool
-    supports_grading: bool
 
 
 class SessionStatusResponse(BaseModel):

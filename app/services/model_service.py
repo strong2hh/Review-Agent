@@ -10,8 +10,8 @@ from typing import Callable, Optional, TypeVar
 from sqlalchemy.orm import Session
 
 from app.config import settings as app_settings
-from app.models import AppSetting, ModelTaskFailure
-from app.services.llm import GradeResult, ModelCallError, ProviderFactory
+from app.models import ModelTaskFailure
+from app.services.llm import DeepSeekProvider, GradeResult, ModelCallError
 
 T = TypeVar("T")
 
@@ -29,17 +29,15 @@ class ModelExecutionError(Exception):
     pass
 
 
-def run_question_generation(db: Session, cfg: AppSetting, title: str, content: str, now: datetime) -> str:
+def run_question_generation(db: Session, title: str, content: str, now: datetime) -> str:
     def _op() -> str:
-        provider = ProviderFactory.build(cfg.question_provider)
-        return provider.generate_question(cfg.question_model, title, content)
+        return DeepSeekProvider().generate_question(title, content)
 
     return _run_with_retry(
         db=db,
-        cfg=cfg,
         task_type=TaskType.QUESTION_GENERATION,
-        provider_name=cfg.question_provider,
-        model_name=cfg.question_model,
+        provider_name="deepseek",
+        model_name=app_settings.deepseek_model,
         now=now,
         operation=_op,
     )
@@ -47,22 +45,19 @@ def run_question_generation(db: Session, cfg: AppSetting, title: str, content: s
 
 def run_grading(
     db: Session,
-    cfg: AppSetting,
     question: str,
     reference: str,
     user_answer: str,
     now: datetime,
 ) -> GradeResult:
     def _op() -> GradeResult:
-        provider = ProviderFactory.build(cfg.grading_provider)
-        return provider.grade_answer(cfg.grading_model, question, reference, user_answer)
+        return DeepSeekProvider().grade_answer(question, reference, user_answer)
 
     return _run_with_retry(
         db=db,
-        cfg=cfg,
         task_type=TaskType.GRADING,
-        provider_name=cfg.grading_provider,
-        model_name=cfg.grading_model,
+        provider_name="deepseek",
+        model_name=app_settings.deepseek_model,
         now=now,
         operation=_op,
     )
@@ -70,7 +65,6 @@ def run_grading(
 
 def _run_with_retry(
     db: Session,
-    cfg: AppSetting,
     task_type: str,
     provider_name: str,
     model_name: str,
@@ -92,7 +86,6 @@ def _run_with_retry(
 
             _record_failure(
                 db=db,
-                cfg=cfg,
                 task_type=task_type,
                 provider_name=provider_name,
                 model_name=model_name,
@@ -122,7 +115,6 @@ def _record_success(db: Session, task_type: str) -> None:
 
 def _record_failure(
     db: Session,
-    cfg: AppSetting,
     task_type: str,
     provider_name: str,
     model_name: str,
@@ -141,7 +133,7 @@ def _record_failure(
 
     should_alert = row.consecutive_failures >= MAX_RETRIES and _alert_window_open(row.last_alert_at, now)
     if should_alert:
-        sent = _send_failure_alert(cfg, task_type, provider_name, model_name, row.consecutive_failures, row.last_error)
+        sent = _send_failure_alert(task_type, provider_name, model_name, row.consecutive_failures, row.last_error)
         if sent:
             row.last_alert_at = now
 
@@ -155,7 +147,6 @@ def _alert_window_open(last_alert_at: Optional[datetime], now: datetime) -> bool
 
 
 def _send_failure_alert(
-    cfg: AppSetting,
     task_type: str,
     provider_name: str,
     model_name: str,

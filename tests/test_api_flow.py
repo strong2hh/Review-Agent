@@ -6,14 +6,29 @@ os.environ["DATABASE_URL"] = "sqlite:///./test_review_agent.db"
 from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import delete
 
 from app.database import SessionLocal, init_db
 from app.main import app
 from app.models import AppSetting, KnowledgePoint, ModelTaskFailure, ReviewAttempt, ReviewSession, ReviewSessionItem
+from app.services.llm import ModelCallError
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def fake_deepseek(monkeypatch):
+    def _fake_chat_completion(self, messages, temperature):
+        _ = self
+        _ = temperature
+        system_prompt = messages[0]["content"]
+        if "简答题" in system_prompt:
+            return '{"question":"请解释这个知识点的核心含义。"}'
+        return '{"score":80,"correction":"回答基本正确。","key_points":"核心要点"}'
+
+    monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _fake_chat_completion)
 
 
 def setup_function():
@@ -76,9 +91,6 @@ def test_admin_page_and_knowledge_points_list_api():
     page_resp = client.get("/admin/knowledge-points")
     assert page_resp.status_code == 200
     assert "后台录入知识点" in page_resp.text
-    model_page_resp = client.get("/admin/model-settings")
-    assert model_page_resp.status_code == 200
-    assert "模型配置" in model_page_resp.text
 
     create_resp = client.post(
         "/api/knowledge-points",
@@ -154,36 +166,6 @@ def test_knowledge_point_update_and_delete():
     assert missing_delete_resp.status_code == 404
 
 
-def test_models_provider_list_and_channels_update():
-    providers_resp = client.get("/api/models/providers")
-    assert providers_resp.status_code == 200
-    providers = providers_resp.json()
-    names = {x["provider"] for x in providers}
-    assert {"openai", "deepseek", "glm", "mock"}.issubset(names)
-
-    update_resp = client.post(
-        "/api/settings/models",
-        json={
-            "question_provider": "deepseek",
-            "question_model": "deepseek-chat",
-            "grading_provider": "glm",
-            "grading_model": "glm-4.5",
-        },
-    )
-    assert update_resp.status_code == 200
-    body = update_resp.json()
-    assert body["question_provider"] == "deepseek"
-    assert body["grading_provider"] == "glm"
-
-    current_resp = client.get("/api/settings/models")
-    assert current_resp.status_code == 200
-    current = current_resp.json()
-    assert current["question_provider"] == "deepseek"
-    assert current["question_model"] == "deepseek-chat"
-    assert current["grading_provider"] == "glm"
-    assert current["grading_model"] == "glm-4.5"
-
-
 def test_markdown_import_supports_hash_headings():
     payload = """# HTTP 缓存
 ETag 和 Cache-Control 是核心机制。
@@ -205,35 +187,28 @@ SYN -> SYN-ACK -> ACK
     assert "TCP 三次握手" in titles
 
 
-def test_legacy_settings_model_route_updates_grading_channel():
-    resp = client.post(
-        "/api/settings/model",
-        json={"model_provider": "openai", "model_name": "gpt-4o-mini"},
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["deprecated"] is True
-    assert body["grading_provider"] == "openai"
-    assert body["grading_model"] == "gpt-4o-mini"
+def test_model_settings_routes_are_removed():
+    assert client.get("/admin/model-settings").status_code == 404
+    assert client.get("/api/models/providers").status_code == 404
+    assert client.get("/api/settings/models").status_code == 404
 
 
-def test_grading_failure_does_not_update_mastery_and_records_failures():
+def test_grading_failure_does_not_update_mastery_and_records_failures(monkeypatch):
+    def _generation_ok_grading_fails(self, messages, temperature):
+        _ = self
+        _ = temperature
+        system_prompt = messages[0]["content"]
+        if "简答题" in system_prompt:
+            return '{"question":"请解释 HTTP 缓存。"}'
+        raise ModelCallError("forced_deepseek_failure")
+
+    monkeypatch.setattr("app.services.llm.DeepSeekProvider._chat_completion", _generation_ok_grading_fails)
+
     create_resp = client.post(
         "/api/knowledge-points",
         json={"title": "HTTP 缓存", "content": "ETag Cache-Control Last-Modified", "tags": []},
     )
     assert create_resp.status_code == 200
-
-    cfg_resp = client.post(
-        "/api/settings/models",
-        json={
-            "question_provider": "mock",
-            "question_model": "mock-q-v1",
-            "grading_provider": "openai",
-            "grading_model": "gpt-4o-mini",
-        },
-    )
-    assert cfg_resp.status_code == 200
 
     start_resp = client.post("/api/review/session/start", json={})
     assert start_resp.status_code == 200

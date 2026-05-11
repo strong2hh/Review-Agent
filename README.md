@@ -2,17 +2,17 @@
 
 FastAPI + SQLite 实现的单用户复习 Agent：
 
-- 基于知识点生成简答题（多模型可切换）
+- 基于知识点生成简答题（DeepSeek）
 - 用户逐题作答
 - 评分 + 纠错 + 关键要点（严格 JSON Schema）
 - 记录掌握度（0-5 星）
 - 按 1/2/4/7/15/30 天 + 掌握度因子自适应排期
 - 每天 08:00（Asia/Shanghai）发送 1 封汇总提醒邮件
 
-## 多模型能力
+## DeepSeek 模型能力
 
-- 支持 Provider：`openai`、`deepseek`、`glm`、`mock`
-- 出题和评分分离配置：`question_*` 与 `grading_*`
+- 固定使用 DeepSeek 出题和评分
+- 模型名通过 `DEEPSEEK_MODEL` 配置，默认 `deepseek-chat`
 - 单次模型请求最多重试 3 次（指数退避）
 - 同一任务类型连续 3 次失败触发 Gmail 告警（按任务类型计数）
 
@@ -29,7 +29,6 @@ uvicorn app.main:app --reload
 
 - `http://localhost:8000/review`：逐题复习页面
 - `http://localhost:8000/admin/knowledge-points`：后台知识点页面（单条/批量录入 + 编辑 + 删除）
-- `http://localhost:8000/admin/model-settings`：模型配置页面（出题/评分模型）
 
 ## Docker 部署（推荐服务器使用）
 
@@ -80,9 +79,9 @@ docker compose up -d
 - `REMINDER_HOUR` 默认 `8`
 - `REMINDER_MINUTE` 默认 `0`
 - `REVIEW_ENTRY_URL` 邮件中的复习入口（默认 `http://localhost:8000/review`）
-- `OPENAI_API_KEY` / `OPENAI_BASE_URL`（可选，默认 `https://api.openai.com/v1`）
-- `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL`（可选，默认 `https://api.deepseek.com/v1`）
-- `GLM_API_KEY` / `GLM_BASE_URL`（可选，默认 `https://open.bigmodel.cn/api/paas/v4`）
+- `DEEPSEEK_API_KEY`（必填，用于 DeepSeek 出题和评分）
+- `DEEPSEEK_BASE_URL`（可选，默认 `https://api.deepseek.com/v1`）
+- `DEEPSEEK_MODEL`（可选，默认 `deepseek-chat`）
 - `MODEL_FAILURE_ALERT_COOLDOWN_HOURS`（默认 `6`）
 - `RECIPIENT_EMAIL`（提醒邮件收件人）
 - `SMTP_FROM`（发件人）
@@ -107,6 +106,10 @@ SMTP_FROM=your_gmail@gmail.com
 SMTP_USER=your_gmail@gmail.com
 SMTP_APP_PASSWORD=xxxx xxxx xxxx xxxx
 SEND_EMPTY_DIGEST=0
+
+DEEPSEEK_API_KEY=sk-...
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
 ## 常用 API
@@ -117,10 +120,6 @@ SEND_EMPTY_DIGEST=0
 - `POST /api/review/session/start`
 - `POST /api/review/session/{id}/answer`
 - `POST /api/reminder/run-daily`
-- `GET /api/models/providers`
-- `GET /api/settings/models`
-- `POST /api/settings/models`
-- `POST /api/settings/model`（兼容旧接口，deprecated）
 
 批量导入格式说明：
 
