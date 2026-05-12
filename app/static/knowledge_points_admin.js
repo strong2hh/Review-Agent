@@ -1,10 +1,12 @@
 const createForm = document.getElementById("create-form");
 const importForm = document.getElementById("import-form");
+const searchForm = document.getElementById("search-form");
 const listEl = document.getElementById("list");
 const createFeedbackEl = document.getElementById("create-feedback");
 const importFeedbackEl = document.getElementById("import-feedback");
 const createBtn = document.getElementById("create-btn");
 const importBtn = document.getElementById("import-btn");
+const searchBtn = document.getElementById("search-btn");
 const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const titleInput = document.getElementById("title");
 const contentInput = document.getElementById("content");
@@ -78,6 +80,13 @@ function enterEditMode(item) {
 
 function getSearchTerm() {
   return searchInput.value.trim();
+}
+
+function setSearchBusy(isBusy) {
+  if (searchBtn) {
+    searchBtn.disabled = isBusy;
+  }
+  clearSearchBtn.disabled = isBusy;
 }
 
 function renderList(items, searchTerm = "") {
@@ -169,12 +178,15 @@ async function loadKnowledgePoints() {
   }
 
   try {
+    setSearchBusy(true);
     const resp = await fetch(`/api/knowledge-points?${params.toString()}`);
     const data = await parseJsonOrThrow(resp);
     renderList(data, searchTerm);
   } catch (err) {
     renderList([], searchTerm);
     showFeedback(importFeedbackEl, false, `加载列表失败：${toErrorMessage(err)}`);
+  } finally {
+    setSearchBusy(false);
   }
 }
 
@@ -274,6 +286,12 @@ importFileEl.addEventListener("change", async (event) => {
   } catch (_err) {
     showFeedback(importFeedbackEl, false, "文件读取失败，请重试。");
   }
+});
+
+searchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  window.clearTimeout(searchTimer);
+  loadKnowledgePoints();
 });
 
 searchInput.addEventListener("input", scheduleKnowledgePointSearch);

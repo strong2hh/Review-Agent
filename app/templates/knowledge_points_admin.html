@@ -165,7 +165,7 @@
       }
       .search-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) auto auto;
         gap: 8px;
         align-items: end;
         margin: 10px 0 8px;
@@ -289,16 +289,17 @@
       <div class="panel" style="margin-top: 16px">
         <h2>最近录入知识点</h2>
         <p class="muted">默认展示最新 50 条，可在列表中直接编辑或删除。</p>
-        <div class="search-row">
+        <form id="search-form" class="search-row">
           <div>
             <label for="search">检索知识点</label>
             <input id="search" type="search" placeholder="输入标题、内容或标签关键词" />
           </div>
+          <button id="search-btn" class="primary" type="submit">搜索</button>
           <button id="clear-search-btn" class="secondary" type="button">清空</button>
-        </div>
+        </form>
         <div id="list" class="list"></div>
       </div>
     </div>
-    <script src="/static/knowledge_points_admin.js"></script>
+    <script src="/static/knowledge_points_admin.js?v=20260512-search-controls"></script>
   </body>
 </html>
