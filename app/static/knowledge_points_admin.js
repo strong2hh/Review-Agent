@@ -12,8 +12,11 @@ const tagsInput = document.getElementById("tags");
 const importFormatEl = document.getElementById("import-format");
 const importPayloadEl = document.getElementById("import-payload");
 const importFileEl = document.getElementById("import-file");
+const searchInput = document.getElementById("search");
+const clearSearchBtn = document.getElementById("clear-search-btn");
 
 let editingKnowledgePointId = null;
+let searchTimer = null;
 
 function splitTags(raw) {
   return raw
@@ -73,12 +76,16 @@ function enterEditMode(item) {
   titleInput.focus();
 }
 
-function renderList(items) {
+function getSearchTerm() {
+  return searchInput.value.trim();
+}
+
+function renderList(items, searchTerm = "") {
   if (!Array.isArray(items) || items.length === 0) {
     listEl.innerHTML = "";
     const empty = document.createElement("p");
     empty.className = "muted";
-    empty.textContent = "暂无知识点，先录入一条吧。";
+    empty.textContent = searchTerm ? "未找到匹配知识点。" : "暂无知识点，先录入一条吧。";
     listEl.appendChild(empty);
     return;
   }
@@ -155,14 +162,27 @@ async function deleteKnowledgePoint(knowledgePointId, title) {
 }
 
 async function loadKnowledgePoints() {
+  const searchTerm = getSearchTerm();
+  const params = new URLSearchParams({ limit: "50" });
+  if (searchTerm) {
+    params.set("q", searchTerm);
+  }
+
   try {
-    const resp = await fetch("/api/knowledge-points?limit=50");
+    const resp = await fetch(`/api/knowledge-points?${params.toString()}`);
     const data = await parseJsonOrThrow(resp);
-    renderList(data);
+    renderList(data, searchTerm);
   } catch (err) {
-    renderList([]);
+    renderList([], searchTerm);
     showFeedback(importFeedbackEl, false, `加载列表失败：${toErrorMessage(err)}`);
   }
+}
+
+function scheduleKnowledgePointSearch() {
+  window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(() => {
+    loadKnowledgePoints();
+  }, 250);
 }
 
 createForm.addEventListener("submit", async (event) => {
@@ -254,6 +274,15 @@ importFileEl.addEventListener("change", async (event) => {
   } catch (_err) {
     showFeedback(importFeedbackEl, false, "文件读取失败，请重试。");
   }
+});
+
+searchInput.addEventListener("input", scheduleKnowledgePointSearch);
+
+clearSearchBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  window.clearTimeout(searchTimer);
+  loadKnowledgePoints();
+  searchInput.focus();
 });
 
 loadKnowledgePoints();

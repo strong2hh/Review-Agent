@@ -115,6 +115,7 @@ DEEPSEEK_MODEL=deepseek-chat
 ## 常用 API
 
 - `POST /api/knowledge-points`
+- `GET /api/knowledge-points?q=关键词&limit=50`：按标题、内容、标签检索知识点；不传 `q` 时返回最新知识点
 - `POST /api/knowledge-points/import`
 - `GET /api/review/due`
 - `POST /api/review/session/start`

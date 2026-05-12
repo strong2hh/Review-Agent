@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -162,8 +163,24 @@ def create_knowledge_point(payload: KnowledgePointCreate, db: Session = Depends(
 
 
 @app.get("/api/knowledge-points", response_model=list[KnowledgePointOut])
-def list_knowledge_points(limit: int = Query(default=100, ge=1, le=500), db: Session = Depends(get_db)):
-    rows = db.query(KnowledgePoint).order_by(KnowledgePoint.id.desc()).limit(limit).all()
+def list_knowledge_points(
+    limit: int = Query(default=100, ge=1, le=500),
+    q: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(KnowledgePoint)
+    search_term = q.strip() if q else ""
+    if search_term:
+        pattern = f"%{search_term}%"
+        query = query.filter(
+            or_(
+                KnowledgePoint.title.ilike(pattern),
+                KnowledgePoint.content.ilike(pattern),
+                KnowledgePoint.tags.ilike(pattern),
+            )
+        )
+
+    rows = query.order_by(KnowledgePoint.id.desc()).limit(limit).all()
     return [_kp_out(kp) for kp in rows]
 
 

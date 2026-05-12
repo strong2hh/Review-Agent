@@ -163,6 +163,19 @@
         overflow: auto;
         padding-right: 2px;
       }
+      .search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: end;
+        margin: 10px 0 8px;
+      }
+      .search-row label {
+        margin-top: 0;
+      }
+      .search-row button {
+        min-width: 76px;
+      }
       .item {
         border: 1px solid var(--line-soft);
         border-left: 4px solid #89aeb9;
@@ -209,6 +222,9 @@
       }
       @media (max-width: 960px) {
         .grid {
+          grid-template-columns: 1fr;
+        }
+        .search-row {
           grid-template-columns: 1fr;
         }
       }
@@ -273,6 +289,13 @@
       <div class="panel" style="margin-top: 16px">
         <h2>最近录入知识点</h2>
         <p class="muted">默认展示最新 50 条，可在列表中直接编辑或删除。</p>
+        <div class="search-row">
+          <div>
+            <label for="search">检索知识点</label>
+            <input id="search" type="search" placeholder="输入标题、内容或标签关键词" />
+          </div>
+          <button id="clear-search-btn" class="secondary" type="button">清空</button>
+        </div>
         <div id="list" class="list"></div>
       </div>
     </div>

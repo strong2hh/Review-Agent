@@ -132,6 +132,41 @@ def test_admin_page_and_knowledge_points_list_api():
     assert rows[0]["tags"] == ["db", "sql"]
 
 
+def test_knowledge_points_list_supports_keyword_search():
+    client.post(
+        "/api/knowledge-points",
+        json={"title": "SQL 索引", "content": "B+ 树可以加速查询", "tags": ["db", "relational"]},
+    )
+    client.post(
+        "/api/knowledge-points",
+        json={"title": "Redis 缓存", "content": "高性能内存键值数据库", "tags": ["cache", "nosql"]},
+    )
+    client.post(
+        "/api/knowledge-points",
+        json={"title": "HTTP 缓存", "content": "ETag 和 Cache-Control 是核心机制", "tags": ["network"]},
+    )
+
+    title_resp = client.get("/api/knowledge-points?q=redis&limit=10")
+    assert title_resp.status_code == 200
+    assert [row["title"] for row in title_resp.json()] == ["Redis 缓存"]
+
+    content_resp = client.get("/api/knowledge-points?q=Cache-Control&limit=10")
+    assert content_resp.status_code == 200
+    assert [row["title"] for row in content_resp.json()] == ["HTTP 缓存"]
+
+    tag_resp = client.get("/api/knowledge-points?q=relational&limit=10")
+    assert tag_resp.status_code == 200
+    assert [row["title"] for row in tag_resp.json()] == ["SQL 索引"]
+
+    blank_resp = client.get("/api/knowledge-points?q=%20%20&limit=10")
+    assert blank_resp.status_code == 200
+    assert len(blank_resp.json()) == 3
+
+    missing_resp = client.get("/api/knowledge-points?q=不存在&limit=10")
+    assert missing_resp.status_code == 200
+    assert missing_resp.json() == []
+
+
 def test_submit_answer_returns_next_title_for_following_question():
     client.post(
         "/api/knowledge-points",
