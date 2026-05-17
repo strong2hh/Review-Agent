@@ -129,12 +129,24 @@
       }
       .challenge-actions {
         display: none;
-        margin-top: 12px;
+        margin-top: 18px;
+        padding: 16px;
         gap: 10px;
         flex-wrap: wrap;
+        align-items: center;
+        border: 1px solid #d8b59b;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #fff8ef, #eef7fb);
       }
       .challenge-actions.visible {
         display: flex;
+      }
+      .challenge-actions::before {
+        content: "今日队列结束后，可以继续挑战掌握度最低的知识点。";
+        flex-basis: 100%;
+        color: var(--ink-soft);
+        font-size: 14px;
+        font-weight: 700;
       }
       .challenge-secondary {
         background: #6b7a86;
@@ -231,7 +243,7 @@
           <textarea id="answer" placeholder="请尽量用自己的语言复述，并写出关键步骤或结论"></textarea>
           <button id="submit-btn">提交并进入下一题</button>
           <div id="challenge-actions" class="challenge-actions">
-            <button id="challenge-btn" type="button">挑战一题</button>
+            <button id="challenge-btn" type="button">开始挑战一题</button>
             <button id="exit-challenge-btn" class="challenge-secondary" type="button">退出挑战</button>
           </div>
 
@@ -249,6 +261,6 @@
         </aside>
       </div>
     </div>
-    <script src="/static/review.js"></script>
+    <script src="/static/review.js?v=20260517-challenge"></script>
   </body>
 </html>
