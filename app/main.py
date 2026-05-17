@@ -36,6 +36,7 @@ from app.services.review_service import (
     get_due_knowledge_points,
     get_grading_result,
     get_session_status,
+    start_challenge_session,
     start_review_session,
     submit_answer,
 )
@@ -256,14 +257,26 @@ def get_due(db: Session = Depends(get_db)):
 
 @app.post("/api/review/session/start", response_model=StartSessionResponse)
 def start_session(db: Session = Depends(get_db)):
-    session, current = start_review_session(db, now=_now())
+    try:
+        session, current = start_review_session(db, now=_now())
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return _start_session_response(session, current)
 
+
+@app.post("/api/review/challenge/start", response_model=StartSessionResponse)
+def start_challenge(db: Session = Depends(get_db)):
+    session, current = start_challenge_session(db, now=_now())
+    return _start_session_response(session, current)
+
+
+def _start_session_response(session, current) -> StartSessionResponse:
     total = len(session.items)
     if not current:
         return StartSessionResponse(
             session_id=session.id,
             total_questions=total,
-            current_index=0,
+            current_index=total,
             question_id=None,
             knowledge_point_id=None,
             title=None,
@@ -273,7 +286,7 @@ def start_session(db: Session = Depends(get_db)):
     return StartSessionResponse(
         session_id=session.id,
         total_questions=total,
-        current_index=1,
+        current_index=current.order_index + 1,
         question_id=current.id,
         knowledge_point_id=current.knowledge_point_id,
         title=current.knowledge_point.title,

@@ -17,6 +17,7 @@ from app.models import (
     KnowledgePoint,
     ModelTaskFailure,
     ReviewAttempt,
+    ReviewDailyBatch,
     ReviewGradingJob,
     ReviewSession,
     ReviewSessionItem,
@@ -46,6 +47,7 @@ def setup_function():
     db = SessionLocal()
     try:
         db.execute(delete(ReviewGradingJob))
+        db.execute(delete(ReviewDailyBatch))
         db.execute(delete(ReviewSessionItem))
         db.execute(delete(ReviewSession))
         db.execute(delete(ReviewAttempt))
@@ -192,6 +194,113 @@ def test_submit_answer_returns_next_title_for_following_question():
     assert len(body["next_title"]) > 0
     assert body["grading_status"] == "pending"
     assert wait_for_grading(body["grading_job_id"])["status"] == "completed"
+
+
+def test_daily_batch_limits_to_weakest_ten_and_resumes_remaining_items():
+    for idx in range(12):
+        resp = client.post(
+            "/api/knowledge-points",
+            json={"title": f"知识点 {idx}", "content": f"内容 {idx}", "tags": []},
+        )
+        assert resp.status_code == 200
+
+    db = SessionLocal()
+    try:
+        rows = db.query(KnowledgePoint).all()
+        for idx, kp in enumerate(rows):
+            kp.mastery = float(11 - idx)
+            kp.stage = idx % 3
+            kp.next_review_at = datetime.utcnow() - timedelta(days=1)
+        db.commit()
+    finally:
+        db.close()
+
+    start_resp = client.post("/api/review/session/start", json={})
+    assert start_resp.status_code == 200
+    session = start_resp.json()
+    assert session["total_questions"] == 10
+    assert session["current_index"] == 1
+    assert session["title"] == "知识点 11"
+
+    session_id = session["session_id"]
+    for _ in range(5):
+        submit_resp = client.post(f"/api/review/session/{session_id}/answer", json={"answer": "回答"})
+        assert submit_resp.status_code == 200
+        wait_for_grading(submit_resp.json()["grading_job_id"])
+
+    resume_resp = client.post("/api/review/session/start", json={})
+    assert resume_resp.status_code == 200
+    resumed = resume_resp.json()
+    assert resumed["session_id"] == session_id
+    assert resumed["total_questions"] == 10
+    assert resumed["current_index"] == 6
+
+
+def test_daily_batch_is_fixed_after_creation():
+    for idx in range(10):
+        resp = client.post(
+            "/api/knowledge-points",
+            json={"title": f"固定 {idx}", "content": f"内容 {idx}", "tags": []},
+        )
+        assert resp.status_code == 200
+
+    first = client.post("/api/review/session/start", json={}).json()
+    session_id = first["session_id"]
+
+    create_resp = client.post(
+        "/api/knowledge-points",
+        json={"title": "当天新增最弱项", "content": "新内容", "tags": []},
+    )
+    assert create_resp.status_code == 200
+    db = SessionLocal()
+    try:
+        kp = db.query(KnowledgePoint).filter(KnowledgePoint.title == "当天新增最弱项").one()
+        kp.mastery = -10.0
+        kp.next_review_at = datetime.utcnow() - timedelta(days=1)
+        db.commit()
+    finally:
+        db.close()
+
+    second = client.post("/api/review/session/start", json={}).json()
+    assert second["session_id"] == session_id
+    assert second["total_questions"] == 10
+    assert second["title"] != "当天新增最弱项"
+
+
+def test_challenge_uses_weakest_knowledge_point_and_updates_schedule():
+    for idx, mastery in enumerate([3.0, 0.2, 1.5]):
+        resp = client.post(
+            "/api/knowledge-points",
+            json={"title": f"挑战 {idx}", "content": f"内容 {idx}", "tags": []},
+        )
+        assert resp.status_code == 200
+        db = SessionLocal()
+        try:
+            kp = db.query(KnowledgePoint).filter(KnowledgePoint.title == f"挑战 {idx}").one()
+            kp.mastery = mastery
+            kp.next_review_at = datetime.utcnow() + timedelta(days=idx + 1)
+            db.commit()
+        finally:
+            db.close()
+
+    start_resp = client.post("/api/review/challenge/start", json={})
+    assert start_resp.status_code == 200
+    body = start_resp.json()
+    assert body["total_questions"] == 1
+    assert body["title"] == "挑战 1"
+
+    submit_resp = client.post(f"/api/review/session/{body['session_id']}/answer", json={"answer": "挑战回答"})
+    assert submit_resp.status_code == 200
+    grading = wait_for_grading(submit_resp.json()["grading_job_id"])
+    assert grading["status"] == "completed"
+
+    db = SessionLocal()
+    try:
+        kp = db.query(KnowledgePoint).filter(KnowledgePoint.title == "挑战 1").one()
+        assert kp.mastery > 0.2
+        assert kp.next_review_at > datetime.utcnow()
+    finally:
+        db.close()
 
 
 def test_knowledge_point_update_and_delete():

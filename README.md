@@ -2,16 +2,17 @@
 
 FastAPI + SQLite 实现的单用户复习 Agent：
 
-- 基于知识点生成简答题（DeepSeek）
-- 用户逐题作答
-- 评分 + 纠错 + 关键要点（严格 JSON Schema）
+- 每天固定推送最多 10 个掌握最不牢靠的到期知识点
+- 用户按知识点标题逐题作答，支持中断后继续当天剩余队列
+- DeepSeek 异步评分 + 纠错 + 关键遗漏判断（严格 JSON Schema）
 - 记录掌握度（0-5 星）
 - 按 1/2/4/7/15/30 天 + 掌握度因子自适应排期
+- 完成当天队列后可进入挑战模式，继续练习掌握薄弱知识点
 - 每天 08:00（Asia/Shanghai）发送 1 封汇总提醒邮件
 
 ## DeepSeek 模型能力
 
-- 固定使用 DeepSeek 出题和评分
+- 固定使用 DeepSeek 评分和纠错，复习题目直接使用知识点标题
 - 模型名通过 `DEEPSEEK_MODEL` 配置，默认 `deepseek-chat`
 - 单次模型请求最多重试 3 次（指数退避）
 - 同一任务类型连续 3 次失败触发 Gmail 告警（按任务类型计数）
@@ -119,7 +120,9 @@ DEEPSEEK_MODEL=deepseek-chat
 - `POST /api/knowledge-points/import`
 - `GET /api/review/due`
 - `POST /api/review/session/start`
+- `POST /api/review/challenge/start`
 - `POST /api/review/session/{id}/answer`
+- `GET /api/review/grading-jobs/{id}`
 - `POST /api/reminder/run-daily`
 
 批量导入格式说明：

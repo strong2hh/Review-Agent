@@ -85,6 +85,17 @@ class ReviewSessionItem(Base):
     knowledge_point: Mapped[KnowledgePoint] = relationship()
 
 
+class ReviewDailyBatch(Base):
+    __tablename__ = "review_daily_batches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    batch_date: Mapped[str] = mapped_column(String(10), nullable=False, unique=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("review_sessions.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    session: Mapped[ReviewSession] = relationship()
+
+
 class ReminderLog(Base):
     __tablename__ = "reminder_logs"
 

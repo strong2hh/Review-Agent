@@ -2,6 +2,7 @@ let sessionId = null;
 let totalQuestions = 0;
 let currentIndex = 1;
 let currentQuestionId = null;
+let sessionMode = "daily";
 
 const progressEl = document.getElementById("progress");
 const titleEl = document.getElementById("title");
@@ -9,6 +10,9 @@ const questionEl = document.getElementById("question");
 const answerEl = document.getElementById("answer");
 const resultEl = document.getElementById("result");
 const submitBtn = document.getElementById("submit-btn");
+const challengeActionsEl = document.getElementById("challenge-actions");
+const challengeBtn = document.getElementById("challenge-btn");
+const exitChallengeBtn = document.getElementById("exit-challenge-btn");
 
 function toErrorMessage(err) {
   if (err instanceof Error && err.message) {
@@ -42,12 +46,32 @@ function renderMissingParts(parts) {
   return `<ul class="missing-list">${parts.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
 }
 
+function setChallengeActions(visible, showExit = false) {
+  challengeActionsEl.classList.toggle("visible", visible);
+  challengeBtn.style.display = visible ? "inline-block" : "none";
+  exitChallengeBtn.style.display = visible && showExit ? "inline-block" : "none";
+}
+
+function setAnswerVisible(visible) {
+  answerEl.style.display = visible ? "block" : "none";
+  submitBtn.style.display = visible ? "inline-block" : "none";
+}
+
 function updateProgress() {
   if (!totalQuestions) {
-    progressEl.textContent = "当前没有待复习知识点，稍后再来。";
+    progressEl.textContent = "当前没有待复习知识点，可以挑战一题。";
     return;
   }
   progressEl.textContent = `第 ${currentIndex} / ${totalQuestions} 题`;
+}
+
+function showDailyComplete() {
+  sessionMode = "daily";
+  titleEl.textContent = "今日复习已完成";
+  questionEl.textContent = "";
+  progressEl.textContent = totalQuestions ? `已完成 ${totalQuestions} / ${totalQuestions}` : "当前没有待复习知识点。";
+  setAnswerVisible(false);
+  setChallengeActions(true, false);
 }
 
 function ensureResultArea() {
@@ -123,6 +147,8 @@ async function pollGradingJob(jobId, attempt) {
 }
 
 async function startSession() {
+  sessionMode = "daily";
+  setChallengeActions(false);
   let data;
   try {
     const resp = await fetch("/api/review/session/start", {
@@ -133,26 +159,64 @@ async function startSession() {
     data = await parseJsonOrThrow(resp);
   } catch (err) {
     progressEl.textContent = `加载失败：${toErrorMessage(err)}`;
-    answerEl.style.display = "none";
-    submitBtn.style.display = "none";
+    setAnswerVisible(false);
     return;
   }
 
   sessionId = data.session_id;
   totalQuestions = data.total_questions;
+  currentIndex = data.current_index || 1;
   currentQuestionId = data.question_id;
   if (!currentQuestionId) {
-    updateProgress();
-    titleEl.textContent = "";
-    questionEl.textContent = "";
-    answerEl.style.display = "none";
-    submitBtn.style.display = "none";
+    showDailyComplete();
     return;
   }
 
   titleEl.textContent = data.title || "知识点";
   questionEl.textContent = "";
+  answerEl.value = "";
+  submitBtn.textContent = "提交并进入下一题";
+  setAnswerVisible(true);
   updateProgress();
+}
+
+async function startChallenge() {
+  sessionMode = "challenge";
+  let data;
+  try {
+    const resp = await fetch("/api/review/challenge/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    data = await parseJsonOrThrow(resp);
+  } catch (err) {
+    progressEl.textContent = `挑战加载失败：${toErrorMessage(err)}`;
+    setAnswerVisible(false);
+    setChallengeActions(true, true);
+    return;
+  }
+
+  sessionId = data.session_id;
+  totalQuestions = data.total_questions;
+  currentIndex = 1;
+  currentQuestionId = data.question_id;
+  if (!currentQuestionId) {
+    titleEl.textContent = "暂无可挑战知识点";
+    questionEl.textContent = "";
+    progressEl.textContent = "没有可挑战的知识点，稍后再来。";
+    setAnswerVisible(false);
+    setChallengeActions(true, true);
+    return;
+  }
+
+  titleEl.textContent = data.title || "挑战题";
+  questionEl.textContent = "";
+  progressEl.textContent = "挑战模式：自由作答，随时可以退出。";
+  answerEl.value = "";
+  submitBtn.textContent = "提交挑战答案";
+  setAnswerVisible(true);
+  setChallengeActions(true, true);
 }
 
 async function submitAnswer() {
@@ -163,6 +227,7 @@ async function submitAnswer() {
   }
 
   const submittedTitle = titleEl.textContent || "上一题";
+  const wasChallenge = sessionMode === "challenge";
   submitBtn.disabled = true;
   submitBtn.textContent = "提交中...";
   let data;
@@ -180,18 +245,23 @@ async function submitAnswer() {
     card.innerHTML = `<strong>提交失败：</strong>${escapeHtml(toErrorMessage(err))}`;
     resultEl.prepend(card);
     submitBtn.disabled = false;
-    submitBtn.textContent = "提交并进入下一题";
+    submitBtn.textContent = wasChallenge ? "提交挑战答案" : "提交并进入下一题";
     return;
   }
 
   appendPendingGrading(data.grading_job_id, submittedTitle);
 
-  if (data.completed) {
-    titleEl.textContent = "本次复习已完成";
+  if (wasChallenge) {
+    titleEl.textContent = "挑战题已提交";
     questionEl.textContent = "";
-    answerEl.style.display = "none";
-    submitBtn.style.display = "none";
-    progressEl.textContent = `已完成 ${totalQuestions} / ${totalQuestions}`;
+    progressEl.textContent = "正在评分。你可以继续挑战下一题，或退出挑战。";
+    setAnswerVisible(false);
+    setChallengeActions(true, true);
+    return;
+  }
+
+  if (data.completed) {
+    showDailyComplete();
     return;
   }
 
@@ -202,8 +272,11 @@ async function submitAnswer() {
   answerEl.value = "";
   submitBtn.disabled = false;
   submitBtn.textContent = "提交并进入下一题";
+  setChallengeActions(false);
   updateProgress();
 }
 
 submitBtn.addEventListener("click", submitAnswer);
+challengeBtn.addEventListener("click", startChallenge);
+exitChallengeBtn.addEventListener("click", showDailyComplete);
 startSession();

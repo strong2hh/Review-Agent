@@ -16,6 +16,7 @@ from app.models import (
     ModelTaskFailure,
     ReminderLog,
     ReviewAttempt,
+    ReviewDailyBatch,
     ReviewGradingJob,
     ReviewSession,
     ReviewSessionItem,
@@ -60,6 +61,7 @@ def setup_function():
     db = SessionLocal()
     try:
         db.execute(delete(ReviewGradingJob))
+        db.execute(delete(ReviewDailyBatch))
         db.execute(delete(ReviewSessionItem))
         db.execute(delete(ReviewSession))
         db.execute(delete(ReviewAttempt))

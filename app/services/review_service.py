@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import KnowledgePoint, ReviewAttempt, ReviewGradingJob, ReviewSession, ReviewSessionItem
+from app.config import settings
+from app.models import KnowledgePoint, ReviewAttempt, ReviewDailyBatch, ReviewGradingJob, ReviewSession, ReviewSessionItem
 from app.services.mastery import update_mastery_and_schedule
 from app.services.model_service import ModelExecutionError, run_grading
 
+DAILY_REVIEW_LIMIT = 10
+
 
 def get_due_knowledge_points(db: Session, now: datetime) -> list[KnowledgePoint]:
+    return _query_due_knowledge_points(db, now, limit=DAILY_REVIEW_LIMIT)
+
+
+def _query_due_knowledge_points(db: Session, now: datetime, limit: Optional[int] = None) -> list[KnowledgePoint]:
     pending_kp_ids = (
         select(ReviewSessionItem.knowledge_point_id)
         .join(ReviewGradingJob, ReviewGradingJob.session_item_id == ReviewSessionItem.id)
@@ -21,13 +29,33 @@ def get_due_knowledge_points(db: Session, now: datetime) -> list[KnowledgePoint]
     stmt: Select[tuple[KnowledgePoint]] = (
         select(KnowledgePoint)
         .where(KnowledgePoint.next_review_at <= now, KnowledgePoint.id.not_in(pending_kp_ids))
-        .order_by(KnowledgePoint.next_review_at.asc(), KnowledgePoint.id.asc())
+        .order_by(
+            KnowledgePoint.mastery.asc(),
+            KnowledgePoint.stage.asc(),
+            KnowledgePoint.next_review_at.asc(),
+            KnowledgePoint.id.asc(),
+        )
     )
+    if limit:
+        stmt = stmt.limit(limit)
     return list(db.scalars(stmt).all())
 
 
 def start_review_session(db: Session, now: datetime) -> Tuple[ReviewSession, Optional[ReviewSessionItem]]:
-    due_items = get_due_knowledge_points(db, now)
+    batch_date = _batch_date(now)
+    existing_batch = db.scalar(select(ReviewDailyBatch).where(ReviewDailyBatch.batch_date == batch_date))
+    if existing_batch:
+        session = db.get(ReviewSession, existing_batch.session_id)
+        if not session:
+            raise ValueError("daily batch session not found")
+        current_item = _get_next_item(db, session.id)
+        if not current_item and session.status != "completed":
+            session.status = "completed"
+            session.completed_at = now
+            db.commit()
+        return session, current_item
+
+    due_items = _query_due_knowledge_points(db, now, limit=DAILY_REVIEW_LIMIT)
 
     session = ReviewSession(status="in_progress", started_at=now)
     db.add(session)
@@ -42,10 +70,62 @@ def start_review_session(db: Session, now: datetime) -> Tuple[ReviewSession, Opt
         )
         db.add(item)
 
+    db.add(ReviewDailyBatch(batch_date=batch_date, session_id=session.id, created_at=now))
     db.commit()
     db.refresh(session)
     current_item = _get_next_item(db, session.id)
     return session, current_item
+
+
+def start_challenge_session(db: Session, now: datetime) -> Tuple[ReviewSession, Optional[ReviewSessionItem]]:
+    kp = _get_challenge_knowledge_point(db)
+    session = ReviewSession(status="challenge", started_at=now)
+    db.add(session)
+    db.flush()
+
+    if kp:
+        db.add(
+            ReviewSessionItem(
+                session_id=session.id,
+                knowledge_point_id=kp.id,
+                order_index=0,
+                question=kp.title,
+            )
+        )
+
+    db.commit()
+    db.refresh(session)
+    current_item = _get_next_item(db, session.id)
+    return session, current_item
+
+
+def _get_challenge_knowledge_point(db: Session) -> Optional[KnowledgePoint]:
+    pending_kp_ids = (
+        select(ReviewSessionItem.knowledge_point_id)
+        .join(ReviewGradingJob, ReviewGradingJob.session_item_id == ReviewSessionItem.id)
+        .where(ReviewGradingJob.status == "pending")
+    )
+    stmt = (
+        select(KnowledgePoint)
+        .where(KnowledgePoint.id.not_in(pending_kp_ids))
+        .order_by(
+            KnowledgePoint.mastery.asc(),
+            KnowledgePoint.stage.asc(),
+            KnowledgePoint.next_review_at.asc(),
+            KnowledgePoint.id.asc(),
+        )
+        .limit(1)
+    )
+    return db.scalar(stmt)
+
+
+def _batch_date(now: datetime) -> str:
+    try:
+        tz = ZoneInfo(settings.timezone)
+    except ZoneInfoNotFoundError:
+        tz = timezone.utc
+    aware = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    return aware.astimezone(tz).date().isoformat()
 
 
 def _get_next_item(db: Session, session_id: int) -> Optional[ReviewSessionItem]:
